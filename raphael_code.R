@@ -29,10 +29,8 @@ data2 = data2[,names(oldata)]
 
 # transformation en numerique
 
-for(i in 1:ncol(data2))
-{
-  ata2[,i]= as.numeric(data2[,i])
-}
+data2 <- data2 %>% 
+  mutate(across(everything(), as.numeric))
 
 
 
@@ -308,13 +306,13 @@ gerstung <- ifelse(osDiag < 0.30, 1, 0)
 
 
 eln17_candidates <- case_when(
-                              alfa_dyn$MRD=="good" ~0,
-                              alfa_dyn$MRD=="bad" ~1,
-                              alfa_dyn$eln17==1 ~0,
-                              alfa_dyn$eln17==2 ~1,
-                              alfa_dyn$eln17==3 ~1,
-                              missing=NULL
-                              )
+  patient$MRD=="good" ~0,
+  patient$MRD=="bad" ~1,
+  patient$eln17==1 ~0,
+  patient$eln17==2 ~1,
+  patient$eln17==3 ~1,
+  missing=NULL
+)
 
 
 
@@ -322,6 +320,4 @@ HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", m
 
 
 ###et on retourne vers l'app pour afficher
-"According to Fenwarth et al, the patient is a candidate for HSCT in first Complete Remission"
-##ou
-"According to Fenwarth et al, the patient is not candidate for HSCT in first Complete Remission"
+output <- paste0("According to Fenwarth et al, the patient is ", HSCT , " for HSCT in first Complete Remission")
