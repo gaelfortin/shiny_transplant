@@ -1,7 +1,7 @@
 
-library(devtools)
-install_github("mg14/mg14")
-install_github("mg14/CoxHD/CoxHD")
+#library(devtools)
+#install_github("mg14/mg14")
+#install_github("mg14/CoxHD/CoxHD")
 
 
 library(shiny)
@@ -11,14 +11,14 @@ library(CoxHD)
 library(Rcpp)
 
 
-####donc j'imagine que les valeurs saisies par l'utilisateur (et celles fixées) arrive dans une dataframe 'data'
+####donc j'imagine que les valeurs saisies par l'utilisateur (et celles fixees) arrive dans une dataframe 'data'
 
-###data2 sert à calculer le Gerstung, on supprime donc les deux dernières colonnes
+###data2 sert a calculer le Gerstung, on supprime donc les deux dernieres colonnes
 
 data2 <- data[,1:(ncol(data)-2)]
 
 
-###on importe le dataset qui permet d'imputer les données manquantes
+###on importe le dataset qui permet d'imputer les donn?es manquantes
 oldata = read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
 
 names(oldata)[!(names(oldata) %in% names(data2))]
@@ -295,7 +295,7 @@ x <- seq(0,timeSearch,1)#0:2000
 models <- c("Ncd","Cr","Rel","Nrd","Prd")
 res = f_calcul(data2i, x = x, models = models, timeSearch = timeSearch)				
 
-###la valeur qui m'intéresse est osDiag, sauf erreur c'est
+###la valeur qui m'interesse est osDiag, sauf erreur c'est
 
 osDiag <- res[2,1]
 
@@ -304,15 +304,17 @@ osDiag <- res[2,1]
 gerstung <- ifelse(osDiag < 0.30, 1, 0)
 
 
-### et après, on n' a plus qu'à lancer l'opérateur booléen
+### et apres, on n' a plus qu'a lancer l'operateur booleen
 
 
-eln17_candidates <- case_when(MRD=="good" ~0,
-                                       alfa_dyn$MRD=="bad" ~1,
-                                       alfa_dyn$eln17==1 ~0,
-                                       alfa_dyn$eln17==2 ~1,
-                                       alfa_dyn$eln17==3 ~1,
-                                       missing=NULL)
+eln17_candidates <- case_when(
+                              alfa_dyn$MRD=="good" ~0,
+                              alfa_dyn$MRD=="bad" ~1,
+                              alfa_dyn$eln17==1 ~0,
+                              alfa_dyn$eln17==2 ~1,
+                              alfa_dyn$eln17==3 ~1,
+                              missing=NULL
+                              )
 
 
 
@@ -323,16 +325,3 @@ HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", m
 "According to Fenwarth et al, the patient is a candidate for HSCT in first Complete Remission"
 ##ou
 "According to Fenwarth et al, the patient is not candidate for HSCT in first Complete Remission"
-
-  
-  
-  
-                  
-                  
-                  
-                  
-                  )
-
-
-
-
