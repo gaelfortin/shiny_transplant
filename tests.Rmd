@@ -1,22 +1,36 @@
+---
+title: "tests"
+output: html_document
+---
 
-#library(devtools)
-#install_github("mg14/mg14")
-#install_github("mg14/CoxHD/CoxHD")
-
-
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = TRUE)
+library(tidyverse)
 library(shiny)
 library(xtable)
 library(RColorBrewer)
 library(CoxHD)
 library(Rcpp)
+```
+
+# Generate a fake patient as outputed by our shiny app
+```{r}
+oldata = read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+
+patient <- oldata[1,] %>% 
+  add_column(eln17 = 2, MRD = "<4 log") %>% 
+  write_csv("patient.csv")
+```
 
 
-####donc j'imagine que les valeurs saisies par l'utilisateur (et celles fixees) arrive dans une dataframe 'data'
+# Script from Raphaël
+Patient data are inputed in a `data` dataframe.
+`data2` is used to compute Gerstung score.
 
-###data2 sert a calculer le Gerstung, on supprime donc les deux dernieres colonnes
-
-data2 <- data[,1:(ncol(data)-2)]
-
+## Prepare patient data for score calculation
+```{r}
+patient <- read_csv("patient.csv")
+data2 <- data[,1:(ncol(patient)-2)]
 
 ###on importe le dataset qui permet d'imputer les donn?es manquantes
 oldata = read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
@@ -28,15 +42,14 @@ data2 = data2[,names(oldata)]
 
 
 # transformation en numerique
-
 data2 <- data2 %>% 
   mutate(across(everything(), as.numeric))
+  
+```
 
+# Gerstung survival scoring function
 
-
-################### FONCTION DE CALCUL DES SURVIES SELON GERSTUNG ##################################
-
-
+```{r}
 f_calcul = function(newdata,x, models, timeSearch)
 {
   
@@ -282,7 +295,10 @@ f_calcul = function(newdata,x, models, timeSearch)
   return(res)
   }
 
+```
 
+# 5 year survival and HSCT prediction
+```{r}
 # imputation des donnees manquantes
 set.seed(123)
 data2i = data.frame(ImputeMissing(oldata, data2))
@@ -306,13 +322,13 @@ gerstung <- ifelse(osDiag < 0.30, 1, 0)
 
 
 eln17_candidates <- case_when(
-  patient$MRD=="good" ~0,
-  patient$MRD=="bad" ~1,
-  patient$eln17==1 ~0,
-  patient$eln17==2 ~1,
-  patient$eln17==3 ~1,
-  missing=NULL
-)
+                              patient$MRD=="good" ~0,
+                              patient$MRD=="bad" ~1,
+                              patient$eln17==1 ~0,
+                              patient$eln17==2 ~1,
+                              patient$eln17==3 ~1,
+                              missing=NULL
+                              )
 
 
 
@@ -321,3 +337,5 @@ HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", m
 
 ###et on retourne vers l'app pour afficher
 output <- paste0("According to Fenwarth et al, the patient is ", HSCT , " for HSCT in first Complete Remission")
+```
+

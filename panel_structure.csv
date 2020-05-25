@@ -1,0 +1,10 @@
+panel,name,label,type,values,default_value,boundaries
+Clinical Data,AOD_10,Age at diagnosis (years),integer,,50,18-84
+Clinical Data,gender,Gender,factor,"Male,Female",Male,
+Clinical Data,LDH_1000,LDH (U/L),integer,,100,83-7627
+Clinical Data,Performance_ECOG,Performance Status (ECOG),factor,"0,1,2,3,4,NA",NA,
+Clinical Data,wbc_100,White Blood Cell count (109/L),numeric,,1,0.2-532.7
+Clinical Data,platelet_100,Platelets (109/L),integer,,100,2-916
+Clinical Data,PB_Blasts_100,Peripheral blasts (%),integer,,50,0-100
+Clinical Data,BM_Blasts_100,Bone Marrow blasts (%),integer,,50,0-100
+Clinical Data,Splenomegaly,Splenomegaly,factor,"Present,Absent,NA",NA,
