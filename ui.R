@@ -67,7 +67,9 @@ shinyUI(fluidPage(
     
     
     
-    mainPanel(h2("Prediction"))
+    mainPanel(h2("Prediction"),
+              tableOutput("resultsdata")
+              )
   )
 ))
 

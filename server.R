@@ -5,11 +5,7 @@ library(RColorBrewer)
 library(CoxHD)
 library(Rcpp)
 
-oldata <- read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-panel_structure <- read_csv("panel_structure.csv")
-
-
-
+#######Gerstung loading
 
 load("multistage.RData", envir=globalenv())
 cr <<- cr
@@ -31,6 +27,10 @@ w <- crGroups[VARIABLES] %in% c("Demographics","Clinical")
 r <- regexpr("(?<=_)[0-9]+$", VARIABLES[w], perl=TRUE)
 SCALEFACTORS[w][r!=-1] <- as.numeric(regmatches(VARIABLES[w],r)) # redefini les scales factors, notamment pour les variables quantitatives (sont marques dans le nom des variables)
 
+#######App loading
+oldata <- read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+panel_structure <- read_csv("panel_structure.csv")
+
 widget_maker <- function(name, label, type, values, default_value, boundaries){
   if (type == "factor") {
     choices <- unlist(str_split(values, ","))
@@ -39,9 +39,8 @@ widget_maker <- function(name, label, type, values, default_value, boundaries){
   } else {
     limits <- unlist(str_split(boundaries, "\\-"))
     numericInput(inputId = name, label, min = limits[1], max = limits[2], default_value)
-  }
-  
-}
+  }}
+
 
 eln_widget <- as.character(panel_structure %>% 
                 filter(name == "eln17"))
@@ -50,6 +49,7 @@ mrd_widget <- as.character(panel_structure %>%
 
 wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 205); padding-bottom:9px; padding-top:9px;"
 
+# as_tibble(t(unlist(input)))
 
 
 shinyServer(function(input, output) {
@@ -120,6 +120,21 @@ shinyServer(function(input, output) {
           style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
         ))
     })
+    
+    ##### Merge all inputs for preparation
+    observeEvent(input$compute, {
+      results <- 
+        as_tibble(t(unlist(reactiveValuesToList(input)))) %>% 
+          select(any_of(panel_structure$name)) %>% 
+          write_csv("results.csv")
+          
+      
+      
+      output$resultsdata <- renderTable({
+        results
+      })
+    })
+    
     
     
     
