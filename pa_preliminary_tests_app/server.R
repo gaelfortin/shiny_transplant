@@ -83,8 +83,6 @@ COMPIDX[c("transplantRel","oAML")] <- 1 ## Index of last elements for display
 VAR2COMP <- unlist(sapply(names(COMPVAR), function(n) rep(n, length(COMPVAR[[n]]))))
 names(VAR2COMP) <- unlist(COMPVAR)
 
-message(VARIABLES[crGroups[VARIABLES]])
-
 
 wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 205); padding-bottom:9px; padding-top:9px;"
 
@@ -443,12 +441,9 @@ shinyServer(function(input, output) {
     output$text_out <- renderText({
         # imputation des donnees manquantes
         
-        inFile <- input$file1
+       
         
-        if (is.null(inFile))
-            return(NULL)
-        
-        patient.file <- read.csv(inFile$datapath, header = input$header)
+        patient.data <- input
         
         data2 <- output$patient.file[,1:(ncol(output$patient.file)-2)]
         
@@ -545,7 +540,7 @@ shinyServer(function(input, output) {
     output$expandTreatment <- renderUI({
         dynamicWellExpand('input.showTreatment % 2', 
                           variables=VARIABLES[crGroups[VARIABLES] == "Treatment"],
-                          style = paste(wellStyle,"margin-bottom:0px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+                          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
         )
     })
 

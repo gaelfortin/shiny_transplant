@@ -66,8 +66,24 @@ fluidPage(
                                         tags$div("Treatment", HTML("&#9662;")),
                                         style = "color:rgb(0,0,0);"
                              ),
-                             style = paste(wellStyle, "margin-bottom: 0px")),
-                         uiOutput("expandTreatment")
+                             style = paste(wellStyle)),
+                         
+                         radioButtons('input.showeln2017', "ELN 2017 risk category", choices = c('Favorable', 'Intermediate', 'Unfavorable'), selected = "Intermediate",
+                                      inline = FALSE, width = NULL, choiceNames = NULL,
+                                      choiceValues = NULL),
+                         
+                         radioButtons('input.showMRD', "NPM1 MRD log reduction in PB", choices = c('< 4 log', '> 4 log', NA), selected = NA,
+                                      inline = FALSE, width = NULL, choiceNames = NULL,
+                                      choiceValues = NULL),
+                         
+                         # uiOutput("expandTreatment"),
+                         # wellPanel(
+                         #     actionLink("showELN2017", 					
+                         #                tags$div("ELN 2017 Classification", HTML("&#9662;")),
+                         #                style = "color:rgb(0,0,0);"
+                         #     ),
+                         #     style = paste(wellStyle, "margin-bottom: 0px")),
+                         # uiOutput("expandEln2017")
                ),
                
                #),
