@@ -24,15 +24,15 @@ fluidPage(
     fluidRow(
         # Sidebar with a slider input for number of observations
         column(3, 
-               wellPanel(
-                   tags$b("0. Patient file Input"),
-                   fileInput("file1", "Choose CSV File",
-                             accept = c(
-                                 "text/csv",
-                                 "text/comma-separated-values,text/plain",
-                                 ".csv")
-                   ),
-               ),
+               # wellPanel(
+               #     tags$b("0. Patient file Input"),
+               #     fileInput("file1", "Choose CSV File",
+               #               accept = c(
+               #                   "text/csv",
+               #                   "text/comma-separated-values,text/plain",
+               #                   ".csv")
+               #     ),
+               # ),
                
                wellPanel(
                    

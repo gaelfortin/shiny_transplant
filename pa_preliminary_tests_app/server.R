@@ -20,14 +20,14 @@ cr <<- cr
 set1 <- brewer.pal(8, "Set1")
 pastel1 <- brewer.pal(8, "Pastel1")
 s <- !crGroups %in% c("Nuisance","GeneGene")  & ! names(crGroups) %in% c("ATRA","VPA")
-VARIABLES <- names(crGroups)[s] 
+VARIABLES <- names(crGroups)[s]
 rg <- c("Fusions"=5, "CNA"=4,"Genetics"=3, "Clinical"=7, "Demographics"=8, "Treatment"=6)
 o <- order(rg[crGroups[s]],((coef(coxRFXPrdTD)^2/diag(coxRFXPrdTD$var2) + coef(coxRFXNrdTD)^2/diag(coxRFXNrdTD$var2) + coef(coxRFXRelTD)^2/diag(coxRFXRelTD$var2)) * apply(data[names(crGroups)], 2, var))[VARIABLES], decreasing=TRUE)
 VARIABLES <- VARIABLES[o]
 NEWGRP <- c(0,diff(as.numeric(as.factor(crGroups))[s][o])) != 0
 names(NEWGRP) <- VARIABLES
-INTERACTIONS <- names(crGroups)[crGroups %in% "GeneGene"] 
-NUISANCE <- names(crGroups)[crGroups %in% "Nuisance" | names(crGroups) %in%  c("ATRA","VPA")] 
+INTERACTIONS <- names(crGroups)[crGroups %in% "GeneGene"]
+NUISANCE <- names(crGroups)[crGroups %in% "Nuisance" | names(crGroups) %in%  c("ATRA","VPA")]
 
 SCALEFACTORS<- rep(1, length(VARIABLES))
 names(SCALEFACTORS) <- VARIABLES
@@ -80,55 +80,59 @@ COMPVAR <- list(`Allogeneic HSCT`=c(none="none", `in first CR`="transplantCR1", 
 COMPIDX <- numeric(length(VARIABLES))
 names(COMPIDX) <- VARIABLES
 COMPIDX[c("transplantRel","oAML")] <- 1 ## Index of last elements for display
-VAR2COMP <- unlist(sapply(names(COMPVAR), function(n) rep(n, length(COMPVAR[[n]])))) 
+VAR2COMP <- unlist(sapply(names(COMPVAR), function(n) rep(n, length(COMPVAR[[n]]))))
 names(VAR2COMP) <- unlist(COMPVAR)
 
 message(VARIABLES[crGroups[VARIABLES]])
+
+
+wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 205); padding-bottom:9px; padding-top:9px;"
+
 
 shinyServer(function(input, output) {
     
 
     
     
-    output$contents <- renderTable({
-        # input$file1 will be NULL initially. After the user selects
-        # and uploads a file, it will be a data frame with 'name',
-        # 'size', 'type', and 'datapath' columns. The 'datapath'
-        # column will contain the local filenames where the data can
-        # be found.
-        inFile <- input$file1
-        
-        if (is.null(inFile))
-            return(NULL)
-        
-        read.csv(inFile$datapath, header = input$header)
-        
-        data2 <- output$contents[,1:(ncol(output$contents)-2)]
-        
-        ###on importe le dataset qui permet d'imputer les donn?es manquantes
-        oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-        
-        data2 <- getData2()
-        
-        names(oldata)[!(names(oldata) %in% names(data2))]
-        
-        # remettre les colonnes dans le bon ordre
-        data2 = data2[,names(oldata)]
-        
-        
-        
-        ###on importe le dataset qui permet d'imputer les donn?es manquantes
-        oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-        
-        names(oldata)[(!names(oldata) %in% names(data2))]
-        
-        message(names(oldata) %in% names(data2))
-        
-        # remettre les colonnes dans le bon ordre
-        data2 = data2[names(oldata),]
-        
-        return(data2)
-    })
+    # output$contents <- renderTable({
+    #     # input$file1 will be NULL initially. After the user selects
+    #     # and uploads a file, it will be a data frame with 'name',
+    #     # 'size', 'type', and 'datapath' columns. The 'datapath'
+    #     # column will contain the local filenames where the data can
+    #     # be found.
+    #     inFile <- input$file1
+    #     
+    #     if (is.null(inFile))
+    #         return(NULL)
+    #     
+    #     read.csv(inFile$datapath, header = input$header)
+    #     
+    #     data2 <- output$contents[,1:(ncol(output$contents)-2)]
+    #     
+    #     ###on importe le dataset qui permet d'imputer les donn?es manquantes
+    #     oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+    #     
+    #     data2 <- getData2()
+    #     
+    #     names(oldata)[!(names(oldata) %in% names(data2))]
+    #     
+    #     # remettre les colonnes dans le bon ordre
+    #     data2 = data2[,names(oldata)]
+    #     
+    #     
+    #     
+    #     ###on importe le dataset qui permet d'imputer les donn?es manquantes
+    #     oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+    #     
+    #     names(oldata)[(!names(oldata) %in% names(data2))]
+    #     
+    #     message(names(oldata) %in% names(data2))
+    #     
+    #     # remettre les colonnes dans le bon ordre
+    #     data2 = data2[names(oldata),]
+    #     
+    #     return(data2)
+    # })
     
     
     
@@ -140,9 +144,51 @@ shinyServer(function(input, output) {
     
     #data2 <- data2 %>% 
         #mutate(across(everything(), as.numeric))
-    
-    
+    setDefaults <- reactive({						
+        pdid <- input[["pdid"]]
+        if(is.null(pdid)) pdid <- "reset all variables"
+        if( pdid=="reset all variables"){
+            defaults <- data[1,]
+            defaults[] <- NA
+        }else
+            defaults <- data[pdid,]
         
+        defaults <- as.numeric(defaults)
+        
+        ## Obfuscation
+        defaults <- signif(defaults * 20,1)/20
+        
+        names(defaults) <- colnames(data)
+        defaults[VARIABLES] <- defaults[VARIABLES] * SCALEFACTORS
+    })
+    
+    
+    
+    makeMenu <- function(x) {
+        defaults <- setDefaults()
+        d <- defaults[x]
+        f <- if(x %in% unlist(COMPVAR)){
+            if(!COMPIDX[x]) return(NULL)
+            s <- defaults[COMPVAR[[VAR2COMP[x]]][-1]]
+            w <- if(any(is.na(s))) 'N/A' else if(all(s==0)) 1 else if(any(!s %in% c(0,1))) 'N/A' else which(s==1)+1
+            c <- c(COMPVAR[[VAR2COMP[x]]], "N/A"="NA")
+            radioButtons(VAR2COMP[x], label=VAR2COMP[x], choices=c, selected=c[w], inline=FALSE)
+        }else if(crGroups[x] %in% c("Genetics","CNA","Fusions","Treatment")){
+            if(!d %in% c(0,1)) d <- NA
+            d <- paste(d)
+            radioButtons(x, label=if(crGroups[x]=="Genetics") tags$em(LABELS[x]) else LABELS[x], choices=c("present"= "1", "absent"="0", "N/A"="NA"), selected=d, inline=TRUE)
+        }else{
+            r <- round(quantile(data[,x]*SCALEFACTORS[x], c(0.05,0.95), na.rm=TRUE),1)
+            if(is.null(CATEGORIES[[x]]))
+                numericInput(inputId=x, label=LABELS[x], value=d, min=r[1], max=r[2], step = if(round(min(data[,x]*SCALEFACTORS[x], na.rm=TRUE),1) %% 1 ==0) 1 else 0.1)
+            else{
+                if(!d %in% 0:10) d <- NA
+                d <- paste(d)
+                radioButtons(x, label=LABELS[x], choices=c(CATEGORIES[[x]],"N/A"="NA"), selected=d, inline=TRUE)
+            }
+        }
+        h <- if(NEWGRP[x]) list(tags$em(tags$b(crGroups[x]))) else NULL
+        list(h,f)}
     
     
     ################### FONCTION DE CALCUL DES SURVIES SELON GERSTUNG ##################################
