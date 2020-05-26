@@ -10,6 +10,7 @@ panel_structure <- read_csv("panel_structure.csv")
 
 
 
+
 load("multistage.RData", envir=globalenv())
 cr <<- cr
 set1 <- brewer.pal(8, "Set1")
@@ -30,10 +31,35 @@ w <- crGroups[VARIABLES] %in% c("Demographics","Clinical")
 r <- regexpr("(?<=_)[0-9]+$", VARIABLES[w], perl=TRUE)
 SCALEFACTORS[w][r!=-1] <- as.numeric(regmatches(VARIABLES[w],r)) # redefini les scales factors, notamment pour les variables quantitatives (sont marques dans le nom des variables)
 
+widget_maker <- function(name, label, type, values, default_value, boundaries){
+  if (type == "factor") {
+    choices <- unlist(str_split(values, ","))
+    default_value <- if_else(is.na(default_value), "NA", default_value)
+    radioButtons(inputId = name, label = label, choices = choices, selected = default_value)
+  } else {
+    limits <- unlist(str_split(boundaries, "\\-"))
+    numericInput(inputId = name, label, min = limits[1], max = limits[2], default_value)
+  }
+  
+}
+
+wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 205); padding-bottom:9px; padding-top:9px;"
 
 
 
 shinyServer(function(input, output) {
-    observe({ print(input$AOD_10) })
-
+    output$expandClinical <- renderUI({
+      conditionalPanel(
+        condition = 'input.showClinical % 2',
+        wellPanel(
+          "test",
+          pmap(panel_structure[,2:ncol(panel_structure)], widget_maker),
+          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+        )
+        
+      )
+      
+      
+      
+      })
 })

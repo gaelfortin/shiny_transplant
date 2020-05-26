@@ -7,6 +7,8 @@ library(Rcpp)
 
 panel_structure <- read_csv("panel_structure.csv")
 
+wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 205); padding-bottom:9px; padding-top:9px;"
+
 
 widget_maker <- function(name, label, type, values, default_value, boundaries){
   if (type == "factor") {
@@ -25,15 +27,14 @@ shinyUI(fluidPage(
   titlePanel("HSCT predictions"),
   sidebarLayout(
     sidebarPanel(h2("Enter variables"),
-            
-                 
-      numericInput("priceInput", "Price", 
-                  min = 0, max = 100, value = 0),
-      
-      pmap(panel_structure[,2:ncol(panel_structure)], widget_maker),
-      
-      
+      wellPanel(
+        actionLink("showClinical", 					
+                   tags$div("Clinical variables", HTML("&#9662;")),
+                   style = "color:rgb(0,0,0);")),
+        uiOutput("expandClinical"),
+        
     ),
     mainPanel(h2("Prediction"))
   )
 ))
+
