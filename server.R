@@ -5,11 +5,7 @@ library(RColorBrewer)
 library(CoxHD)
 library(Rcpp)
 
-oldata <- read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-panel_structure <- read_csv("panel_structure.csv")
-
-
-
+#######Gerstung loading
 
 load("multistage.RData", envir=globalenv())
 cr <<- cr
@@ -31,6 +27,10 @@ w <- crGroups[VARIABLES] %in% c("Demographics","Clinical")
 r <- regexpr("(?<=_)[0-9]+$", VARIABLES[w], perl=TRUE)
 SCALEFACTORS[w][r!=-1] <- as.numeric(regmatches(VARIABLES[w],r)) # redefini les scales factors, notamment pour les variables quantitatives (sont marques dans le nom des variables)
 
+#######App loading
+oldata <- read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+panel_structure <- read_csv("panel_structure.csv")
+
 widget_maker <- function(name, label, type, values, default_value, boundaries){
   if (type == "factor") {
     choices <- unlist(str_split(values, ","))
@@ -39,9 +39,8 @@ widget_maker <- function(name, label, type, values, default_value, boundaries){
   } else {
     limits <- unlist(str_split(boundaries, "\\-"))
     numericInput(inputId = name, label, min = limits[1], max = limits[2], default_value)
-  }
-  
-}
+  }}
+
 
 eln_widget <- as.character(panel_structure %>% 
                 filter(name == "eln17"))
@@ -50,6 +49,7 @@ mrd_widget <- as.character(panel_structure %>%
 
 wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 205); padding-bottom:9px; padding-top:9px;"
 
+# as_tibble(t(unlist(input)))
 
 
 shinyServer(function(input, output) {
@@ -120,6 +120,68 @@ shinyServer(function(input, output) {
           style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
         ))
     })
+    
+    ##### Merge all inputs for preparation
+    observeEvent(input$compute, {
+      patient_data <- 
+        as_tibble(t(unlist(reactiveValuesToList(input)))) %>% 
+          select(any_of(panel_structure$name)) 
+          
+      ##### Transform inputs
+      patient_data[patient_data=="Absent"]<-"0"
+      patient_data[patient_data=="Wildtype"]<-"0"
+      patient_data[patient_data=="Present"]<-"1"
+      patient_data[patient_data=="Mutated"]<-"1"
+      patient_data[patient_data=="Male"]<-"1"
+      patient_data[patient_data=="Favorable"]<-"1"
+      patient_data[patient_data=="Female"]<-"2"
+      patient_data[patient_data=="Intermediate"]<-"2"
+      patient_data[patient_data=="Unfavorable"]<-"3"
+      patient_data[patient_data=="< 4 log"]<-"bad"
+      patient_data[patient_data=="> 4 log"]<-"good"
+      mrd <- patient_data$MRD[1]
+      
+      ##### Encode additional AML_type variables
+      AML <- patient_data$AML_type[1] #de novo,secondary,therapy-related,other,N/A
+      patient_data$oAML[1] <- case_when(AML == "de novo" ~ 0,
+                                        AML == "secondary" ~ 0,
+                                        AML == "therapy-related" ~ 0,
+                                        AML == "other" ~ 1,
+                                        AML == NA ~ NA_real_)
+      patient_data$tAML[1] <- case_when(AML == "de novo" ~ 0,
+                                        AML == "secondary" ~ 0,
+                                        AML == "therapy-related" ~ 1,
+                                        AML == "other" ~ 0,
+                                        AML == NA ~ NA_real_)
+      patient_data$sAML[1] <- case_when(AML == "de novo" ~ 0,
+                                        AML == "secondary" ~ 1,
+                                        AML == "therapy-related" ~ 0,
+                                        AML == "other" ~ 0,
+                                        AML == NA ~ NA_real_)
+
+      ###### Transform numeric values
+      patient_data <- mutate_all(patient_data, as.numeric)
+      patient_data$AOD_10[1] <- patient_data$AOD_10[1]/10
+      patient_data$LDH_1000[1] <- patient_data$LDH_1000[1]/1000
+      patient_data$wbc_100[1] <- patient_data$wbc_100[1]/100
+      patient_data$platelet_100[1] <- patient_data$platelet_100[1]/100
+      patient_data$PB_Blasts_100[1] <- patient_data$PB_Blasts_100[1]/100
+      patient_data$BM_Blasts_100[1] <- patient_data$BM_Blasts_100[1]/100
+      # patient_data$AML_type[1] <- AML #Put AML_type back
+      patient_data$MRD[1] <- mrd #Put MRD character value back
+      
+      ##### Add treatment value (=transplantation)
+      patient_data$transplantCR1 <- 0
+      patient_data$transplantRel <- 1
+
+      write_csv(patient_data, "patient_data.csv")
+      
+      ##### Output input values (temporary output)
+      output$resultsdata <- renderTable({
+        patient_data
+      })
+    })
+    
     
     
     
