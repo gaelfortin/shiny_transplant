@@ -53,6 +53,7 @@ wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 20
 
 
 shinyServer(function(input, output) {
+  # GUI menus to input variables
     output$expandClinical <- renderUI({
       conditionalPanel(
         condition = 'input.showClinical % 2',
@@ -119,4 +120,10 @@ shinyServer(function(input, output) {
           style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
         ))
     })
+    
+    
+    
+    
+    
+    
 })
