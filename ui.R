@@ -68,7 +68,8 @@ shinyUI(fluidPage(
     
     
     mainPanel(h2("Prediction"),
-              tableOutput("resultsdata")
+              tableOutput("resultsdata"),
+              textOutput("hsct_prediction")
               )
   )
 ))

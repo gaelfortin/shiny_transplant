@@ -29,16 +29,18 @@ Patient data are inputed in a `data` dataframe.
 
 ## Prepare patient data for score calculation
 ```{r}
-patient <- read_csv("patient.csv")
-data2 <- data[,1:(ncol(patient)-2)]
+patient <- read_csv("patient_data.csv")
+data2 <- patient %>% 
+  select(-eln17, -MRD)
 
-###on importe le dataset qui permet d'imputer les donn?es manquantes
+###on importe le dataset qui permet d'imputer les donnees manquantes
 oldata = read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
 
 names(oldata)[!(names(oldata) %in% names(data2))]
 
 # remettre les colonnes dans le bon ordre
 data2 = data2[,names(oldata)]
+
 
 
 # transformation en numerique
@@ -222,48 +224,11 @@ f_calcul = function(newdata,x, models, timeSearch)
     relDiag <- computeHierarchicalSurvival(x = x, diffS0 = diff(cr), S1Static = relCr, haz1TimeDep = tdOsBaseline)
     
     
-    ## Confidence intervals
-    # osLoDiag <- osUpDiag <- rep(NA, length(osDiag))
-    
-    # if("analytical" %in% input$ciType){
-    # PlogP2 <- function(x) {(x * log(x))^2}
-    # errOsCr <- kmNrd$r[,2] * PlogP2(kmNrd$inc) * (1-(1-kmRel$inc) * (1-kmPrs$inc))^2 + kmRel$r[,2] * PlogP2(kmRel$inc) * (1-kmPrs$inc)^2* kmNrd$inc^2 +  kmPrs$r[,2] * PlogP2(kmPrs$inc) * (1-kmRel$inc)^2* kmNrd$inc^2 
-    # errOsCr <- sqrt(errOsCr / PlogP2(osCr))
-    # osUpCr <- osCr ^ exp(2* errOsCr)
-    # osLoCr <- osCr ^ exp(-2*errOsCr)
-    #segments(z, osLo[z+1] ,z,osUp[z+1], col=1, lwd=2)
-    # }
-    # if("simulated" %in% input$ciType){
-    # Simulate CI
-    # nSim <- 200
-    # osCrMc <- sapply(1:nSim, function(i){
-    # r <- exp(rnorm(5,0,sqrt(c(kmRel$r[,2],kmNrd$r[,2],kmPrs$r[,2], kmNcd$r[,2], kmCr$r[,2]))))
-    # nrsCr <- .crAdjust(kmNrd$inc^r[2],  kmRel$inc^r[1], time=x) ## Correct KM estimate for competing risk
-    # diffCir <- diff(kmRel$inc^r[1]) * kmNrd$inc[-1]^r[2] ## Correct KM estimate for competing risk							
-    # rsCr <- computeHierarchicalSurvival(x = x, diffS0 = diffCir, S1Static = prsP, haz1TimeDep = tdPrmBaseline * exp(kmPrs$r[,1]-kmPrs$r0+log(r[3])))
-    # osCr <- 1-(1-nrsCr)-(1-rsCr)
-    
-    # cr <- .crAdjust(kmCr$inc^r[5], kmNcd$inc^r[4], time=x)
-    # ncd <- .crAdjust(kmNcd$inc^r[4], kmCr$inc^r[5], time=x)
-    # osDiag <- computeHierarchicalSurvival(x = x, diffS0 = diff(cr), S1Static = osCr, haz1TimeDep = tdOsBaseline)
-    
-    # return(cbind(osCr, osDiag - (1-ncd)))
-    # }, simplify="array")
-    # osCrMcQ <- apply(osCrMc,1:2,quantile, c(0.025,0.975))
-    # osLoCr <- osCrMcQ[1,,1]
-    # osUpCr <- osCrMcQ[2,,1]
-    # osLoDiag <- osCrMcQ[1,,2]
-    # osUpDiag <- osCrMcQ[2,,2]
-    # }
-    
-    #absolutePredictions=data.frame(x=x, cr=cr, ncd=ncd, osDiag=osDiag, nrsDiag=nrsDiag, rsDiag=rsDiag, relDiag=relDiag, osCr=osCr, nrsCr=nrsCr, relCr=relCr, rsCr=rsCr, osUpCr=osUpCr, osLoCr=osLoCr, osLoDiag=osLoDiag, osUpDiag=osUpDiag)
-    
-    
     absolutePredictions=data.frame(x=x,  osDiag=osDiag, nrsDiag=nrsDiag, rsDiag=rsDiag, relDiag=relDiag, osCr=osCr, nrsCr=nrsCr, relCr=relCr, rsCr=rsCr, ncd = ncd)
     
     return(absolutePredictions[x == timeSearch,])
     
-    #return(absolutePredictions)
+    
     
     
   }
@@ -293,7 +258,7 @@ f_calcul = function(newdata,x, models, timeSearch)
   colnames(res) = rownames(newdata)
   
   return(res)
-  }
+}
 
 ```
 
