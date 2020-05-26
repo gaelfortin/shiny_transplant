@@ -8,3 +8,5 @@ Clinical Data,platelet_100,Platelets (109/L),integer,,100,2-916
 Clinical Data,PB_Blasts_100,Peripheral blasts (%),integer,,50,0-100
 Clinical Data,BM_Blasts_100,Bone Marrow blasts (%),integer,,50,0-100
 Clinical Data,Splenomegaly,Splenomegaly,factor,"Present,Absent,NA",NA,
+Clinical Data,HB_10,HB (U/H),integer,,10,2.5-17.6
+Clinical Data,AML_type,Type of AML,factor,"de novo,secondary,therapy-related,other,N/A",NA,
