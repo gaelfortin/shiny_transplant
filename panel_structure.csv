@@ -9,7 +9,7 @@ Clinical Data,PB_Blasts_100,Peripheral blasts (%),integer,,50,0-100
 Clinical Data,BM_Blasts_100,Bone Marrow blasts (%),integer,,50,0-100
 Clinical Data,Splenomegaly,Splenomegaly,factor,"Present,Absent,NA",NA,
 Clinical Data,HB_10,HB (U/H),integer,,10,2.5-17.6
-Clinical Data,AML_type,Type of AML,factor,"de novo,secondary,therapy-related,other,N/A",NA,
+Clinical Data,AML_type,Type of AML,factor,"de novo,secondary,therapy-related,other,NA",NA,
 Cytogenetics,inv16_t16_16,inv(16) or t(16;16),factor,"Present,Absent,NA",Absent,
 Cytogenetics,t_15_17,t(15;17),factor,"Present,Absent,NA",Absent,
 Cytogenetics,t_v_11,t(v;11) MLL fusion other than t(9;11),factor,"Present,Absent,NA",Absent,
@@ -94,4 +94,4 @@ Genetics (rare mutations),SF3A1,SF3A1,factor,"Mutated,Wildtype,NA",NA,
 Genetics (rare mutations),SH2B3,SH2B3,factor,"Mutated,Wildtype,NA",NA,
 Genetics (rare mutations),U2AF2,U2AF2,factor,"Mutated,Wildtype,NA",NA,
 ELN 2017 Classification,eln17,ELN 2017 risk category,factor,"Favorable,Intermediate,Unfavorable",Intermediate,
-NPM1 MRD,MRD,NPM1 MRD log reduction in PB,factor,"< 4 log , > 4 log",NA,
+NPM1 MRD,MRD,NPM1 MRD log reduction in PB,factor,"< 4 log,> 4 log,NA",NA,

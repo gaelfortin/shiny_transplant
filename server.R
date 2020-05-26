@@ -123,15 +123,62 @@ shinyServer(function(input, output) {
     
     ##### Merge all inputs for preparation
     observeEvent(input$compute, {
-      results <- 
+      patient_data <- 
         as_tibble(t(unlist(reactiveValuesToList(input)))) %>% 
-          select(any_of(panel_structure$name)) %>% 
-          write_csv("results.csv")
+          select(any_of(panel_structure$name)) 
           
+      ##### Transform inputs
+      patient_data[patient_data=="Absent"]<-"0"
+      patient_data[patient_data=="Wildtype"]<-"0"
+      patient_data[patient_data=="Present"]<-"1"
+      patient_data[patient_data=="Mutated"]<-"1"
+      patient_data[patient_data=="Male"]<-"1"
+      patient_data[patient_data=="Favorable"]<-"1"
+      patient_data[patient_data=="Female"]<-"2"
+      patient_data[patient_data=="Intermediate"]<-"2"
+      patient_data[patient_data=="Unfavorable"]<-"3"
+      patient_data[patient_data=="< 4 log"]<-"bad"
+      patient_data[patient_data=="> 4 log"]<-"good"
+      mrd <- patient_data$MRD[1]
       
+      ##### Encode additional AML_type variables
+      AML <- patient_data$AML_type[1] #de novo,secondary,therapy-related,other,N/A
+      patient_data$oAML[1] <- case_when(AML == "de novo" ~ 0,
+                                        AML == "secondary" ~ 0,
+                                        AML == "therapy-related" ~ 0,
+                                        AML == "other" ~ 1,
+                                        AML == NA ~ NA_real_)
+      patient_data$tAML[1] <- case_when(AML == "de novo" ~ 0,
+                                        AML == "secondary" ~ 0,
+                                        AML == "therapy-related" ~ 1,
+                                        AML == "other" ~ 0,
+                                        AML == NA ~ NA_real_)
+      patient_data$sAML[1] <- case_when(AML == "de novo" ~ 0,
+                                        AML == "secondary" ~ 1,
+                                        AML == "therapy-related" ~ 0,
+                                        AML == "other" ~ 0,
+                                        AML == NA ~ NA_real_)
+
+      ###### Transform numeric values
+      patient_data <- mutate_all(patient_data, as.numeric)
+      patient_data$AOD_10[1] <- patient_data$AOD_10[1]/10
+      patient_data$LDH_1000[1] <- patient_data$LDH_1000[1]/1000
+      patient_data$wbc_100[1] <- patient_data$wbc_100[1]/100
+      patient_data$platelet_100[1] <- patient_data$platelet_100[1]/100
+      patient_data$PB_Blasts_100[1] <- patient_data$PB_Blasts_100[1]/100
+      patient_data$BM_Blasts_100[1] <- patient_data$BM_Blasts_100[1]/100
+      # patient_data$AML_type[1] <- AML #Put AML_type back
+      patient_data$MRD[1] <- mrd #Put MRD character value back
       
+      ##### Add treatment value (=transplantation)
+      patient_data$transplantCR1 <- 0
+      patient_data$transplantRel <- 1
+
+      write_csv(patient_data, "patient_data.csv")
+      
+      ##### Output input values (temporary output)
       output$resultsdata <- renderTable({
-        results
+        patient_data
       })
     })
     
