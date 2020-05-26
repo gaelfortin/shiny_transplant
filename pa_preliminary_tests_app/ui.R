@@ -25,6 +25,17 @@ fluidPage(
         # Sidebar with a slider input for number of observations
         column(3, 
                wellPanel(
+                   tags$b("0. Patient file Input"),
+                   fileInput("file1", "Choose CSV File",
+                             accept = c(
+                                 "text/csv",
+                                 "text/comma-separated-values,text/plain",
+                                 ".csv")
+                   ),
+               ),
+               
+               wellPanel(
+                   
                    tags$b("1. Select sample (or enter new patient's variables below)"),								
                    selectizeInput(inputId="pdid", label="", choices=c("reset all variables",rownames(data)[order(as.numeric(gsub("[A-z]","", rownames(data))))]),  multiple=FALSE, 
                                   options = list(maxOptions = nrow(data)+1,
@@ -81,31 +92,33 @@ fluidPage(
                )
         ),
         
-        # Show a plot of the generated distribution
+        #Show a plot of the generated distribution
         column(9,
                tabsetPanel(
-                   tabPanel('Results',
-                            tags$h3("Patient summary"),
-                            htmlOutput(outputId="patientSummary"),
-                            tags$h3("Outcome after diagnosis"),
-                            #tags$h4("Multistage probabilities"),
-                            plotOutput(outputId="multistageDiag",height="300px", width="500px"),
-                            tags$h4("Outcome 3 years after diagnosis"),
-                            htmlOutput(outputId="absoluteRiskDiag"),
-                            tags$h3("Outcome after first complete remission"),
-                            #tags$h4("Multistage probabilities"),
-                            plotOutput(outputId="multistageCR",height="300px", width="500px"),
-                            tags$h4("Outcome 3 years after remission"),
-                            htmlOutput(outputId="absoluteRiskCr")),
-                   
-                   tabPanel('Log hazard',
-                            dataTableOutput("Risk")),
-                   tabPanel("Coefficients",
-                            dataTableOutput("Tab")),
-                   tabPanel("Help",
-                            includeHTML("../www/help.html"),
-                            tags$h4("Version info"),
-                            tags$code(gitLog))
+                   # tabPanel('Results',
+                   #          tags$h3("Patient summary"),
+                   #          htmlOutput(outputId="patientSummary"),
+                   #          tags$h3("Outcome after diagnosis"),
+                   #          #tags$h4("Multistage probabilities"),
+                   #          plotOutput(outputId="multistageDiag",height="300px", width="500px"),
+                   #          tags$h4("Outcome 3 years after diagnosis"),
+                   #          htmlOutput(outputId="absoluteRiskDiag"),
+                   #          tags$h3("Outcome after first complete remission"),
+                   #          #tags$h4("Multistage probabilities"),
+                   #          plotOutput(outputId="multistageCR",height="300px", width="500px"),
+                   #          tags$h4("Outcome 3 years after remission"),
+                   #          htmlOutput(outputId="absoluteRiskCr")),
+                   # 
+                   # tabPanel('Log hazard',
+                   #          dataTableOutput("Risk")),
+                   # tabPanel("Coefficients",
+                   #          dataTableOutput("Tab")),
+                   # tabPanel("Help",
+                   #          includeHTML("../www/help.html"),
+                   #          tags$h4("Version info"),
+                   #          tags$code(gitLog)),
+                   tabPanel("Test HSCT",
+                            textOutput("text_out"))
                ))
         
     )

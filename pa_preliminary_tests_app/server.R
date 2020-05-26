@@ -15,73 +15,125 @@ library(Rcpp)
 library(dplyr)
 
 
-# Define server logic required to draw a histogram
+load("../multistage.RData", envir=globalenv())
+cr <<- cr
+set1 <- brewer.pal(8, "Set1")
+pastel1 <- brewer.pal(8, "Pastel1")
+s <- !crGroups %in% c("Nuisance","GeneGene")  & ! names(crGroups) %in% c("ATRA","VPA")
+VARIABLES <- names(crGroups)[s] 
+rg <- c("Fusions"=5, "CNA"=4,"Genetics"=3, "Clinical"=7, "Demographics"=8, "Treatment"=6)
+o <- order(rg[crGroups[s]],((coef(coxRFXPrdTD)^2/diag(coxRFXPrdTD$var2) + coef(coxRFXNrdTD)^2/diag(coxRFXNrdTD$var2) + coef(coxRFXRelTD)^2/diag(coxRFXRelTD$var2)) * apply(data[names(crGroups)], 2, var))[VARIABLES], decreasing=TRUE)
+VARIABLES <- VARIABLES[o]
+NEWGRP <- c(0,diff(as.numeric(as.factor(crGroups))[s][o])) != 0
+names(NEWGRP) <- VARIABLES
+INTERACTIONS <- names(crGroups)[crGroups %in% "GeneGene"] 
+NUISANCE <- names(crGroups)[crGroups %in% "Nuisance" | names(crGroups) %in%  c("ATRA","VPA")] 
+
+SCALEFACTORS<- rep(1, length(VARIABLES))
+names(SCALEFACTORS) <- VARIABLES
+w <- crGroups[VARIABLES] %in% c("Demographics","Clinical")
+r <- regexpr("(?<=_)[0-9]+$", VARIABLES[w], perl=TRUE)
+SCALEFACTORS[w][r!=-1] <- as.numeric(regmatches(VARIABLES[w],r))
+
+CATEGORIES <- sapply(VARIABLES, function(x){
+    if(length(unique(data[,x])) <= 10){
+        c <- min(data[,x]):max(data[,x])
+        if(all(c %in% 0:1))
+            names(c) <- c("absent","present")
+        else if(x =="gender")
+            names(c) <- c("male","female")
+        return(c)
+    }
+    else
+        NULL
+})
+
+LABELS <- sapply(VARIABLES, function(x){
+    r <- round(range(data[,x]*SCALEFACTORS[x], na.rm=TRUE),1)
+    i <- paste0(" [",r[1],"-",r[2],"]")
+    paste0(sub(paste0("_",SCALEFACTORS[x],"$"),"",x), ifelse(is.null(CATEGORIES[[x]]),i,""))
+})
+
+LIMITS <- sapply(VARIABLES, function(x){
+    r <- round(range(data[,x], na.rm=TRUE),1)})
+
+LABELS["AOD_10"] <- sub("AOD", "Age at diagnosis (yr)", LABELS["AOD_10"])
+LABELS["LDH_1000"] <- sub("LDH", "Lactic Acid Dehydrogenase (units/l)", LABELS["LDH_1000"])
+LABELS["wbc_100"] <- sub("wbc", "White cell count (1e-9/l)", LABELS["wbc_100"])
+LABELS["HB_10"] <- sub("HB", "Hemoglobin (g/dl)", LABELS["HB_10"])
+LABELS["BM_Blasts_100"] <- sub("BM_Blasts", "Bone marrow blasts (%)", LABELS["BM_Blasts_100"])
+LABELS["PB_Blasts_100"] <- sub("PB_Blasts", "Peripheral blood blasts (%)", LABELS["PB_Blasts_100"])
+LABELS["platelet_100"] <- sub("platelet", "Platelet count (1e-9/l)", LABELS["platelet_100"])
+LABELS["VPA"] <- "VPA (Valproic acid)"
+LABELS["transplantCR1"] <- "Allograft in CR1"
+LABELS["transplantRel"] <- "Allograft after Relapse"
+LABELS["gender"] <- "Gender"
+LABELS <- sub("t_*([a-z,0-9]+)_([a-z,0-9]+)", "t(\\1;\\2)", LABELS)
+LABELS[crGroups[VARIABLES] %in% c("Fusions","CNA")] <- gsub("_","/",LABELS[crGroups[VARIABLES] %in% c("Fusions","CNA")])
+LABELS <- sub("plus","+",LABELS)
+LABELS <- sub("minus|^mono","-",LABELS)
+LABELS <- sub("(_|/)*other"," (other)", LABELS)
+LABELS <- sub("_([0-9a-zA-Z]+)"," (\\1)", LABELS)
+
+
+COMPVAR <- list(`Allogeneic HSCT`=c(none="none", `in first CR`="transplantCR1", `after relapse`="transplantRel"), `AML type`=c(primary='AML', secondary='sAML',`therapy-related`='tAML',other='oAML')) ## Compound variables (factors)
+COMPIDX <- numeric(length(VARIABLES))
+names(COMPIDX) <- VARIABLES
+COMPIDX[c("transplantRel","oAML")] <- 1 ## Index of last elements for display
+VAR2COMP <- unlist(sapply(names(COMPVAR), function(n) rep(n, length(COMPVAR[[n]])))) 
+names(VAR2COMP) <- unlist(COMPVAR)
+
+message(VARIABLES[crGroups[VARIABLES]])
+
 shinyServer(function(input, output) {
     
-    load("../multistage.RData", envir=globalenv())
-    cr <<- cr
-    set1 <- brewer.pal(8, "Set1")
-    pastel1 <- brewer.pal(8, "Pastel1")
-    s <- !crGroups %in% c("Nuisance","GeneGene")  & ! names(crGroups) %in% c("ATRA","VPA")
-    VARIABLES <- names(crGroups)[s]  ## nom des variables du modele
-    rg <- c("Fusions"=5, "CNA"=4,"Genetics"=3, "Clinical"=7, "Demographics"=8, "Treatment"=6)
-    o <- order(rg[crGroups[s]],((coef(coxRFXPrdTD)^2/diag(coxRFXPrdTD$var2) + coef(coxRFXNrdTD)^2/diag(coxRFXNrdTD$var2) + coef(coxRFXRelTD)^2/diag(coxRFXRelTD$var2)) * apply(data[names(crGroups)], 2, var))[VARIABLES], decreasing=TRUE)
-    VARIABLES <- VARIABLES[o]
-    NEWGRP <- c(0,diff(as.numeric(as.factor(crGroups))[s][o])) != 0
-    names(NEWGRP) <- VARIABLES
-    INTERACTIONS <- names(crGroups)[crGroups %in% "GeneGene"] 
-    NUISANCE <- names(crGroups)[crGroups %in% "Nuisance" | names(crGroups) %in%  c("ATRA","VPA")] 
-    
-    SCALEFACTORS<- rep(1, length(VARIABLES))
-    names(SCALEFACTORS) <- VARIABLES
-    w <- crGroups[VARIABLES] %in% c("Demographics","Clinical")
-    r <- regexpr("(?<=_)[0-9]+$", VARIABLES[w], perl=TRUE)
-    SCALEFACTORS[w][r!=-1] <- as.numeric(regmatches(VARIABLES[w],r)) # redefini les scales factors, notamment pour les variables quantitatives (sont marques dans le nom des variables)
+
     
     
-    
-    getData <- reactive({
-        input$pdid
-        isolate({
-            l <- list()
-            for(n in VARIABLES){
-                if(!n %in% unlist(COMPVAR)){
-                    l[[n]] <- ifelse(input[[n]]=="NA",NA,as.numeric(input[[n]]))
-                    if(is.null(input[[n]])) l[[n]] <- NA
-                }else{
-                    l[[n]] <- ifelse(input[[VAR2COMP[n]]]=="NA", NA, input[[VAR2COMP[n]]]==n) + 0
-                    if(is.null(input[[VAR2COMP[n]]])) l[[n]] <- NA
-                }
-            }
-            for(n in INTERACTIONS){
-                s <- strsplit(n, ":")[[1]]
-                l[[n]] <- l[[s[1]]] * l[[s[2]]]
-            }
-            for(n in NUISANCE)
-                l[[n]] <- NA
-            out <- do.call("data.frame",l)
-            names(out) <- names(l)
-            out[VARIABLES] <- out[VARIABLES]/SCALEFACTORS
-            return(out)
-        })
+    output$contents <- renderTable({
+        # input$file1 will be NULL initially. After the user selects
+        # and uploads a file, it will be a data frame with 'name',
+        # 'size', 'type', and 'datapath' columns. The 'datapath'
+        # column will contain the local filenames where the data can
+        # be found.
+        inFile <- input$file1
+        
+        if (is.null(inFile))
+            return(NULL)
+        
+        read.csv(inFile$datapath, header = input$header)
+        
+        data2 <- output$contents[,1:(ncol(output$contents)-2)]
+        
+        ###on importe le dataset qui permet d'imputer les donn?es manquantes
+        oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+        
+        data2 <- getData2()
+        
+        names(oldata)[!(names(oldata) %in% names(data2))]
+        
+        # remettre les colonnes dans le bon ordre
+        data2 = data2[,names(oldata)]
+        
+        
+        
+        ###on importe le dataset qui permet d'imputer les donn?es manquantes
+        oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+        
+        names(oldata)[(!names(oldata) %in% names(data2))]
+        
+        message(names(oldata) %in% names(data2))
+        
+        # remettre les colonnes dans le bon ordre
+        data2 = data2[names(oldata),]
+        
+        return(data2)
     })
+    
+    
+    
     
 
-    data2 <- reactive({
-        return(getData()[,1:(ncol(getData())-2)])
-    })
-        
-    
-    
-    ###on importe le dataset qui permet d'imputer les donn?es manquantes
-    oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-    
-    names(oldata)[(!names(oldata) %in% names(data2))]
-    
-    message(names(oldata) %in% names(data2))
-    
-    # remettre les colonnes dans le bon ordre
-    data2 = data2[names(oldata),]
     
     
     # transformation en numerique
@@ -340,45 +392,115 @@ shinyServer(function(input, output) {
     }
     
     
-    # imputation des donnees manquantes
-    set.seed(123)
-    data2i = data.frame(ImputeMissing(oldata, data2))
+
     
-    # 5 ans allRel
-    timeSearch = 1825 # temps retenu pour la prediction (en jours)
-    x <- seq(0,timeSearch,1)#0:2000
-    models <- c("Ncd","Cr","Rel","Nrd","Prd")
-    res = f_calcul(data2i, x = x, models = models, timeSearch = timeSearch)				
+    output$text_out <- renderText({
+        # imputation des donnees manquantes
+        
+        inFile <- input$file1
+        
+        if (is.null(inFile))
+            return(NULL)
+        
+        patient.file <- read.csv(inFile$datapath, header = input$header)
+        
+        data2 <- output$patient.file[,1:(ncol(output$patient.file)-2)]
+        
+        ###on importe le dataset qui permet d'imputer les donn?es manquantes
+        oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+        
+        data2 <- getData2()
+        
+        names(oldata)[!(names(oldata) %in% names(data2))]
+        
+        # remettre les colonnes dans le bon ordre
+        data2 = data2[,names(oldata)]
+        
+        
+        
+        ###on importe le dataset qui permet d'imputer les donn?es manquantes
+        oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+        
+        names(oldata)[(!names(oldata) %in% names(data2))]
+        
+        message(names(oldata) %in% names(data2))
+        
+        # remettre les colonnes dans le bon ordre
+        data2 = data2[names(oldata),]
+        
+        set.seed(123)
+        
+
+        data2 <- output$contents
+        
+        data2i = data.frame(ImputeMissing(oldata, data2))
+        
+        # 5 ans allRel
+        timeSearch = 1825 # temps retenu pour la prediction (en jours)
+        x <- seq(0,timeSearch,1)#0:2000
+        models <- c("Ncd","Cr","Rel","Nrd","Prd")
+        res = f_calcul(data2i, x = x, models = models, timeSearch = timeSearch)				
+        
+        ###la valeur qui m'interesse est osDiag, sauf erreur c'est
+        
+        osDiag <- res[2,1]
+        
+        ##le cutoff est 
+        
+        gerstung <- ifelse(osDiag < 0.30, 1, 0)
+        
+        
+        ### et apres, on n' a plus qu'a lancer l'operateur booleen
+        
+        
+        eln17_candidates <- case_when(
+            patient$MRD=="good" ~0,
+            patient$MRD=="bad" ~1,
+            patient$eln17==1 ~0,
+            patient$eln17==2 ~1,
+            patient$eln17==3 ~1,
+            missing=NULL
+        )
+        
+        
+        
+        HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", missing=NULL)
+        
+        
+        ###et on retourne vers l'app pour afficher
+        text_out <- paste0("According to Fenwarth et al, the patient is ", HSCT , " for HSCT in first Complete Remission")
+        return(text_out)
+    })
     
-    ###la valeur qui m'interesse est osDiag, sauf erreur c'est
     
-    osDiag <- res[2,1]
-    
-    ##le cutoff est 
-    
-    gerstung <- ifelse(osDiag < 0.30, 1, 0)
-    
-    
-    ### et apres, on n' a plus qu'a lancer l'operateur booleen
-    
-    
-    eln17_candidates <- case_when(
-        patient$MRD=="good" ~0,
-        patient$MRD=="bad" ~1,
-        patient$eln17==1 ~0,
-        patient$eln17==2 ~1,
-        patient$eln17==3 ~1,
-        missing=NULL
-    )
+    dynamicWellExpand <- function(condition, variables, style="", before=NULL){
+        conditionalPanel(condition = condition,
+                         wellPanel(
+                             before,
+                             lapply(variables, makeMenu),
+                             style = style
+                         )
+        )
+    }
     
     
-    
-    HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", missing=NULL)
-    
-    
-    ###et on retourne vers l'app pour afficher
-    output <- paste0("According to Fenwarth et al, the patient is ", HSCT , " for HSCT in first Complete Remission")
-    
-    renderText(output, env = parent.frame(), quoted = FALSE)
+    output$expandClinical <- renderUI({
+        dynamicWellExpand('input.showClinical % 2', 
+                          variables=VARIABLES[crGroups[VARIABLES] %in% c("Clinical","Demographics")], 
+                          before=tags$em(tags$b(crGroups[VARIABLES[1]])),
+                          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset"))
+    })
+    output$expandDrivers <- renderUI({
+        dynamicWellExpand('input.showDrivers % 2', 
+                          variables = VARIABLES[crGroups[VARIABLES] %in% c("Genetics","Fusions","CNA")],
+                          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+        )
+    })
+    output$expandTreatment <- renderUI({
+        dynamicWellExpand('input.showTreatment % 2', 
+                          variables=VARIABLES[crGroups[VARIABLES] == "Treatment"],
+                          style = paste(wellStyle,"margin-bottom:0px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+        )
+    })
 
 })

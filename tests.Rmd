@@ -11,6 +11,9 @@ library(xtable)
 library(RColorBrewer)
 library(CoxHD)
 library(Rcpp)
+
+
+library("ggpubr")
 ```
 
 # Generate a fake patient as outputed by our shiny app
@@ -30,7 +33,7 @@ Patient data are inputed in a `data` dataframe.
 ## Prepare patient data for score calculation
 ```{r}
 patient <- read_csv("patient.csv")
-data2 <- data[,1:(ncol(patient)-2)]
+data2 <- patient[,1:(ncol(patient)-2)]
 
 ###on importe le dataset qui permet d'imputer les donn?es manquantes
 oldata = read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
@@ -42,8 +45,9 @@ data2 = data2[,names(oldata)]
 
 
 # transformation en numerique
-data2 <- data2 %>% 
-  mutate(across(everything(), as.numeric))
+#data2 <- data2 %>% 
+#  mutate(across(everything(), as.numeric))
+
   
 ```
 
@@ -337,5 +341,6 @@ HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", m
 
 ###et on retourne vers l'app pour afficher
 output <- paste0("According to Fenwarth et al, the patient is ", HSCT , " for HSCT in first Complete Remission")
+output
 ```
 
