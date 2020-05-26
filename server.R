@@ -43,6 +43,11 @@ widget_maker <- function(name, label, type, values, default_value, boundaries){
   
 }
 
+eln_widget <- as.character(panel_structure %>% 
+                filter(name == "eln17"))
+mrd_widget <- as.character(panel_structure %>% 
+                filter(name == "MRD"))
+
 wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 205); padding-bottom:9px; padding-top:9px;"
 
 
@@ -52,14 +57,66 @@ shinyServer(function(input, output) {
       conditionalPanel(
         condition = 'input.showClinical % 2',
         wellPanel(
-          "test",
-          pmap(panel_structure[,2:ncol(panel_structure)], widget_maker),
+          pmap(panel_structure %>% 
+                 filter(panel == "Clinical Data") %>% 
+                 select(-panel), widget_maker),
           style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
-        )
-        
-      )
-      
-      
-      
+        ))
       })
+    output$expandCytogenetics <- renderUI({
+      conditionalPanel(
+        condition = 'input.showCytogenetics % 2',
+        wellPanel(
+          pmap(panel_structure %>% 
+                 filter(panel == "Cytogenetics") %>% 
+                 select(-panel), widget_maker),
+          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+        ))
+    })
+    output$expandGenetics_core<- renderUI({
+      conditionalPanel(
+        condition = 'input.showGenetics_core % 2',
+        wellPanel(
+          pmap(panel_structure %>% 
+                 filter(panel == "Genetics (core)") %>% 
+                 select(-panel), widget_maker),
+          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+        ))
+    })
+    output$expandGenetics_myeloid<- renderUI({
+      conditionalPanel(
+        condition = 'input.showGenetics_myeloid % 2',
+        wellPanel(
+          pmap(panel_structure %>% 
+                 filter(panel == "Genetics (myeloid panels)") %>% 
+                 select(-panel), widget_maker),
+          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+        ))
+    })
+    output$expandGenetics_rare<- renderUI({
+      conditionalPanel(
+        condition = 'input.showGenetics_rare % 2',
+        wellPanel(
+          pmap(panel_structure %>% 
+                 filter(panel == "Genetics (rare mutations)") %>% 
+                 select(-panel), widget_maker),
+          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+        ))
+    })
+    output$expandeln17<- renderUI({
+      conditionalPanel(
+        condition = 'input.showeln17 % 2',
+        wellPanel(
+          widget_maker(eln_widget[2], eln_widget[3], eln_widget[4], eln_widget[5], eln_widget[6], eln_widget[7]),
+          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+        ))
+    })
+    output$expandmrd<- renderUI({
+      conditionalPanel(
+        condition = 'input.showmrd % 2',
+        wellPanel(
+          widget_maker(mrd_widget[2], mrd_widget[3], mrd_widget[4], mrd_widget[5], mrd_widget[6], mrd_widget[7]),
+          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+        ))
+    })
 })
