@@ -88,60 +88,8 @@ wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 20
 
 
 shinyServer(function(input, output) {
-    
-
-    
-    
-    # output$contents <- renderTable({
-    #     # input$file1 will be NULL initially. After the user selects
-    #     # and uploads a file, it will be a data frame with 'name',
-    #     # 'size', 'type', and 'datapath' columns. The 'datapath'
-    #     # column will contain the local filenames where the data can
-    #     # be found.
-    #     inFile <- input$file1
-    #     
-    #     if (is.null(inFile))
-    #         return(NULL)
-    #     
-    #     read.csv(inFile$datapath, header = input$header)
-    #     
-    #     data2 <- output$contents[,1:(ncol(output$contents)-2)]
-    #     
-    #     ###on importe le dataset qui permet d'imputer les donn?es manquantes
-    #     oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-    #     
-    #     data2 <- getData2()
-    #     
-    #     names(oldata)[!(names(oldata) %in% names(data2))]
-    #     
-    #     # remettre les colonnes dans le bon ordre
-    #     data2 = data2[,names(oldata)]
-    #     
-    #     
-    #     
-    #     ###on importe le dataset qui permet d'imputer les donn?es manquantes
-    #     oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-    #     
-    #     names(oldata)[(!names(oldata) %in% names(data2))]
-    #     
-    #     message(names(oldata) %in% names(data2))
-    #     
-    #     # remettre les colonnes dans le bon ordre
-    #     data2 = data2[names(oldata),]
-    #     
-    #     return(data2)
-    # })
-    
-    
-    
-    
-
-    
-    
-    # transformation en numerique
-    
-    #data2 <- data2 %>% 
-        #mutate(across(everything(), as.numeric))
+  
+  
     setDefaults <- reactive({						
         pdid <- input[["pdid"]]
         if(is.null(pdid)) pdid <- "reset all variables"
@@ -435,65 +383,93 @@ shinyServer(function(input, output) {
         return(res)
     }
     
-    
+    getData <- reactive({
+      input$compute
+      isolate({
+        l <- list()
+        for(n in VARIABLES){
+          if(!n %in% unlist(COMPVAR)){
+            l[[n]] <- ifelse(input[[n]]=="NA",NA,as.numeric(input[[n]]))
+            if(is.null(input[[n]])) l[[n]] <- NA
+          }else{
+            l[[n]] <- ifelse(input[[VAR2COMP[n]]]=="NA", NA, input[[VAR2COMP[n]]]==n) + 0
+            if(is.null(input[[VAR2COMP[n]]])) l[[n]] <- NA
+          }
+        }
+        for(n in INTERACTIONS){
+          s <- strsplit(n, ":")[[1]]
+          l[[n]] <- l[[s[1]]] * l[[s[2]]]
+        }
+        for(n in NUISANCE)
+          l[[n]] <- NA
+        out <- do.call("data.frame",l)
+        names(out) <- names(l)
+        out[VARIABLES] <- out[VARIABLES]/SCALEFACTORS
+        eln17.patient <- if_else(input$input.showeln2017 == "Favorable", 1, if_else(input$input.showeln2017 == "Intermediate", 2, 3))
+        MRD.patient <- if_else(input$input.showMRD == "< 4 log", 0, 1)
+        out <- c(out, eln17=eln17.patient)
+        out <- c(out, MRD=MRD.patient)
+        return(out)
+      })
+    })
 
-    
+    observeEvent(input$compute, {
+      showModal(modalDialog(
+        title = "Button pressed",
+        HTML("<h3>ELN 2017:", input$input.showeln2017, "</h3><br> 
+              <h3>NPM1 MRD:", input$input.showMRD  ,"</h3><br>
+             <h3>Clinical:", data.frame(getData()), "</h3><br>")
+      ))
+    })
+
+    observeEvent(input$compute, {
     output$text_out <- renderText({
         # imputation des donnees manquantes
-        
-       
-        
-        patient.data <- input
-        
-        data2 <- output$patient.file[,1:(ncol(output$patient.file)-2)]
-        
+
+        data <- data.frame(getData())
+      
+        data2 <- data[,1:(ncol(data)-2)]
+
         ###on importe le dataset qui permet d'imputer les donn?es manquantes
         oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-        
-        data2 <- getData2()
-        
+
+        #data2 <- getData2()
+
         names(oldata)[!(names(oldata) %in% names(data2))]
-        
+
         # remettre les colonnes dans le bon ordre
         data2 = data2[,names(oldata)]
-        
-        
-        
+
+
+
         ###on importe le dataset qui permet d'imputer les donn?es manquantes
         oldata = read.csv("../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-        
-        names(oldata)[(!names(oldata) %in% names(data2))]
-        
-        message(names(oldata) %in% names(data2))
-        
+
         # remettre les colonnes dans le bon ordre
         data2 = data2[names(oldata),]
-        
-        set.seed(123)
-        
 
-        data2 <- output$contents
-        
+        set.seed(123)
+
         data2i = data.frame(ImputeMissing(oldata, data2))
-        
+
         # 5 ans allRel
         timeSearch = 1825 # temps retenu pour la prediction (en jours)
         x <- seq(0,timeSearch,1)#0:2000
         models <- c("Ncd","Cr","Rel","Nrd","Prd")
-        res = f_calcul(data2i, x = x, models = models, timeSearch = timeSearch)				
-        
+        res = f_calcul(data2i, x = x, models = models, timeSearch = timeSearch)
+
         ###la valeur qui m'interesse est osDiag, sauf erreur c'est
-        
+
         osDiag <- res[2,1]
-        
-        ##le cutoff est 
-        
+
+        ##le cutoff est
+
         gerstung <- ifelse(osDiag < 0.30, 1, 0)
-        
-        
+
+
         ### et apres, on n' a plus qu'a lancer l'operateur booleen
-        
-        
+
+
         eln17_candidates <- case_when(
             patient$MRD=="good" ~0,
             patient$MRD=="bad" ~1,
@@ -502,15 +478,16 @@ shinyServer(function(input, output) {
             patient$eln17==3 ~1,
             missing=NULL
         )
-        
-        
-        
+
+
+
         HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", missing=NULL)
-        
-        
+
+
         ###et on retourne vers l'app pour afficher
         text_out <- paste0("According to Fenwarth et al, the patient is ", HSCT , " for HSCT in first Complete Remission")
         return(text_out)
+    })
     })
     
     
@@ -542,6 +519,16 @@ shinyServer(function(input, output) {
                           variables=VARIABLES[crGroups[VARIABLES] == "Treatment"],
                           style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
         )
+    })
+    
+    output$list <- renderUI({
+      getData()
+    })
+    
+    output$table <- renderDataTable({
+      data <- getData()
+      df <- data.frame(data, colnames = names(data))
+      DT::datatable(df)
     })
 
 })

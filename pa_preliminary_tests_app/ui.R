@@ -68,13 +68,15 @@ fluidPage(
                              ),
                              style = paste(wellStyle)),
                          
+                         uiOutput("expandTreatment"),
+                         
+                         
                          radioButtons('input.showeln2017', "ELN 2017 risk category", choices = c('Favorable', 'Intermediate', 'Unfavorable'), selected = "Intermediate",
                                       inline = FALSE, width = NULL, choiceNames = NULL,
                                       choiceValues = NULL),
                          
                          radioButtons('input.showMRD', "NPM1 MRD log reduction in PB", choices = c('< 4 log', '> 4 log', NA), selected = NA,
-                                      inline = FALSE, width = NULL, choiceNames = NULL,
-                                      choiceValues = NULL),
+                                      inline = FALSE),
                          
                          # uiOutput("expandTreatment"),
                          # wellPanel(
@@ -133,8 +135,11 @@ fluidPage(
                    #          includeHTML("../www/help.html"),
                    #          tags$h4("Version info"),
                    #          tags$code(gitLog)),
-                   tabPanel("Test HSCT",
-                            textOutput("text_out"))
+                 tabPanel("Test HSCT",
+                         textOutput("text_out")),
+                 tabPanel("Test input datatable", 
+                          dataTableOutput("table"),
+                          uiOutput("list"))
                ))
         
     )
