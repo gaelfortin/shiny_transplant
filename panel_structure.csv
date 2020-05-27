@@ -39,9 +39,9 @@ Cytogenetics,minusY,loss of chromosome Y,factor,"Present,Absent,NA",Absent,
 Genetics (core),NPM1,NPM1,factor,"Mutated,Wildtype,NA",Wildtype,
 Genetics (core),FLT3_ITD,FLT3-ITD,factor,"Present,Absent,NA",Absent,
 Genetics (core),FLT3_TKD,FLT3-TKD,factor,"Present,Absent,NA",Absent,
-Genetics (core),FLT3_other,FLT3 , other mutation,factor,"Present,Absent,NA",Absent
-Genetics (core),CEBPA_bi,CEBPA mutation, biallelic,factor,"Present,Absent,NA",Absent
-Genetics (core),CEBPA_mono,CEBPA mutation, monoallelic,factor,"Present,Absent,NA",Absent
+Genetics (core),FLT3_other,FLT3 other mutation ,factor,"Present,Absent,NA",Absent,
+Genetics (core),CEBPA_bi,CEBPA biallelic mutation,factor,"Present,Absent,NA",Absent,
+Genetics (core),CEBPA_mono,CEBPA monoallelic mutation,factor,"Present,Absent,NA",Absent,
 Genetics (core),IDH1,IDH1,factor,"Mutated,Wildtype,NA",Wildtype,
 Genetics (core),IDH2_p140,IDH2 R140 mutation,factor,"Present,Absent,NA",Absent,
 Genetics (core),IDH2_p172,IDH2 R172 mutation,factor,"Present,Absent,NA",Absent,
