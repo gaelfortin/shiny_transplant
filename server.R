@@ -166,13 +166,16 @@ shinyServer(function(input, output) {
       patient_data$platelet_100[1] <- patient_data$platelet_100[1]/100
       patient_data$PB_Blasts_100[1] <- patient_data$PB_Blasts_100[1]/100
       patient_data$BM_Blasts_100[1] <- patient_data$BM_Blasts_100[1]/100
-      # patient_data$AML_type[1] <- AML #Put AML_type back
+      
       patient_data$MRD[1] <- mrd #Put MRD character value back
       
       ##### Add treatment value (=transplantation)
       patient_data$transplantCR1 <- 0
       patient_data$transplantRel <- 1
-
+      
+      patient_data <- patient_data %>% 
+        select(-AML_type)
+      
       write_csv(patient_data, "patient_data.csv")
       
       ##### Output input values (temporary output)
