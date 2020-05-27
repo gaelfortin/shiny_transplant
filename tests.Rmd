@@ -18,7 +18,7 @@ library(Rcpp)
 oldata = read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
 
 patient <- oldata[1,] %>% 
-  add_column(eln17 = 2, MRD = "<4 log") %>% 
+  add_column(eln17 = 2, MRD = "bad") %>% 
   write_csv("patient.csv")
 ```
 
@@ -29,23 +29,8 @@ Patient data are inputed in a `data` dataframe.
 
 ## Prepare patient data for score calculation
 ```{r}
-patient <- read_csv("patient_data.csv")
-data2 <- patient %>% 
-  select(-eln17, -MRD)
+patient <- read_csv("patient_hsct_candidate.csv")
 
-###on importe le dataset qui permet d'imputer les donnees manquantes
-oldata = read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
-
-names(oldata)[!(names(oldata) %in% names(data2))]
-
-# remettre les colonnes dans le bon ordre
-data2 = data2[,names(oldata)]
-
-
-
-# transformation en numerique
-data2 <- data2 %>% 
-  mutate(across(everything(), as.numeric))
   
 ```
 
@@ -262,45 +247,86 @@ f_calcul = function(newdata,x, models, timeSearch)
 
 ```
 
-# 5 year survival and HSCT prediction
+# 5 year survival and HSCT prediction __function__
 ```{r}
-# imputation des donnees manquantes
-set.seed(123)
-data2i = data.frame(ImputeMissing(oldata, data2))
+###on importe le dataset qui permet d'imputer les donnees manquantes
+  oldata = read.csv("donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
 
-# 5 ans allRel
-timeSearch = 1825 # temps retenu pour la prediction (en jours)
-x <- seq(0,timeSearch,1)#0:2000
-models <- c("Ncd","Cr","Rel","Nrd","Prd")
-res = f_calcul(data2i, x = x, models = models, timeSearch = timeSearch)				
+hsct_pred <- function(patient = patient){
+  # import data
+  data2 <- patient %>% 
+    select(-eln17, -MRD, -gerstung, -HSCT)
+  
+  names(oldata)[!(names(oldata) %in% names(data2))]
+  
+  # remettre les colonnes dans le bon ordre
+  data2 = data2[,names(oldata)]
+  
+  
+  
+  # transformation en numerique
+  data2 <- data2 %>% 
+    mutate(across(everything(), as.numeric))
+    
+  # imputation des donnees manquantes
+  set.seed(123)
+  data2i = data.frame(ImputeMissing(oldata, data2))
+  
+  # 5 ans allRel
+  timeSearch = 1825 # temps retenu pour la prediction (en jours)
+  x <- seq(0,timeSearch,1)#0:2000
+  models <- c("Ncd","Cr","Rel","Nrd","Prd")
+  res = f_calcul(data2i, x = x, models = models, timeSearch = timeSearch)				
+  
+  ###la valeur qui m'interesse est osDiag, sauf erreur c'est
+  
+  osDiag <- res[2,1]
+  
+  ##le cutoff est 
+  
+  gerstung <- ifelse(osDiag < 0.30, 1, 0)
+  
+  
+  ### et apres, on n' a plus qu'a lancer l'operateur booleen
+  
+  
+  eln17_candidates <- case_when(
+                                patient$MRD=="good" ~0,
+                                patient$MRD=="bad" ~1,
+                                patient$eln17==1 ~0,
+                                patient$eln17==2 ~1,
+                                patient$eln17==3 ~1,
+                                missing=NULL
+                                )
+  
+  
+  
+  HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", missing=NULL)
+  
+  return(HSCT)
+}
 
-###la valeur qui m'interesse est osDiag, sauf erreur c'est
 
-osDiag <- res[2,1]
+```
 
-##le cutoff est 
-
-gerstung <- ifelse(osDiag < 0.30, 1, 0)
-
-
-### et apres, on n' a plus qu'a lancer l'operateur booleen
-
-
-eln17_candidates <- case_when(
-                              patient$MRD=="good" ~0,
-                              patient$MRD=="bad" ~1,
-                              patient$eln17==1 ~0,
-                              patient$eln17==2 ~1,
-                              patient$eln17==3 ~1,
-                              missing=NULL
-                              )
+# Prepare data from Raphael
+```{r}
+alfa <- read_tsv("ALFA0702_test_shiny.txt") %>% 
+  select(-obs) %>% 
+  slice_head(n=100)
 
 
 
-HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", missing=NULL)
+
+alfa_predictions <- NULL
+
+for (row in 1:nrow(alfa)) {
+  alfa_predictions <- c(alfa_predictions, hsct_pred(alfa[row,]))
+}
 
 
-###et on retourne vers l'app pour afficher
-output <- paste0("According to Fenwarth et al, the patient is ", HSCT , " for HSCT in first Complete Remission")
+alfa <- bind_cols(alfa, tibble(prediction = alfa_predictions))
+
+write_csv(alfa, "ALFA0702_test_shiny_predicted.txt")
 ```
 
