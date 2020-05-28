@@ -303,7 +303,7 @@ hsct_pred <- function(patient = patient){
   
   HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", missing=NULL)
   
-  return(HSCT)
+  return(paste(HSCT, as.numeric(osDiag), sep = ","))
 }
 
 
@@ -315,7 +315,7 @@ alfa <- read_tsv("ALFA0702_test_shiny.txt") %>%
   select(-obs) %>% 
   slice_head(n=100)
 
-
+hsct_pred(alfa[37,])
 
 
 alfa_predictions <- NULL
