@@ -47,7 +47,7 @@ eln_widget <- as.character(panel_structure %>%
 mrd_widget <- as.character(panel_structure %>% 
                 filter(name == "MRD"))
 
-wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 205); padding-bottom:9px; padding-top:9px;"
+wellStyle <- "background-color:rgb(255, 255, 255); border-color:rgb(204, 205, 205); padding-bottom:9px; padding-top:9px; margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset"
 
 
 
@@ -60,7 +60,7 @@ shinyServer(function(input, output) {
           pmap(panel_structure %>% 
                  filter(panel == "Clinical Data") %>% 
                  select(-panel), widget_maker),
-          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+          style = wellStyle
         ))
       })
     output$expandCytogenetics <- renderUI({
@@ -70,7 +70,7 @@ shinyServer(function(input, output) {
           pmap(panel_structure %>% 
                  filter(panel == "Cytogenetics") %>% 
                  select(-panel), widget_maker),
-          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+          style = wellStyle
         ))
     })
     output$expandGenetics_core<- renderUI({
@@ -80,7 +80,7 @@ shinyServer(function(input, output) {
           pmap(panel_structure %>% 
                  filter(panel == "Genetics (core)") %>% 
                  select(-panel), widget_maker),
-          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+          style = wellStyle
         ))
     })
     output$expandGenetics_myeloid<- renderUI({
@@ -90,7 +90,7 @@ shinyServer(function(input, output) {
           pmap(panel_structure %>% 
                  filter(panel == "Genetics (myeloid panels)") %>% 
                  select(-panel), widget_maker),
-          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+          style = wellStyle
         ))
     })
     output$expandGenetics_rare<- renderUI({
@@ -100,7 +100,7 @@ shinyServer(function(input, output) {
           pmap(panel_structure %>% 
                  filter(panel == "Genetics (rare mutations)") %>% 
                  select(-panel), widget_maker),
-          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+          style = wellStyle
         ))
     })
     output$expandeln17<- renderUI({
@@ -108,7 +108,7 @@ shinyServer(function(input, output) {
         condition = 'input.showeln17 % 2',
         wellPanel(
           widget_maker(eln_widget[2], eln_widget[3], eln_widget[4], eln_widget[5], eln_widget[6], eln_widget[7]),
-          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+          style = wellStyle
         ))
     })
     output$expandmrd<- renderUI({
@@ -116,7 +116,7 @@ shinyServer(function(input, output) {
         condition = 'input.showmrd % 2',
         wellPanel(
           widget_maker(mrd_widget[2], mrd_widget[3], mrd_widget[4], mrd_widget[5], mrd_widget[6], mrd_widget[7]),
-          style = paste(wellStyle,"margin-top:-20px; overflow-y:scroll; max-height: 400px; position:relative; 2px 1px 1px rgba(0, 0, 0, 0.05) inset")
+          style = wellStyle
         ))
     })
     
