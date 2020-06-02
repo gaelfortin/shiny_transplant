@@ -38,7 +38,7 @@ widget_maker <- function(name, label, type, values, default_value, boundaries){
     radioButtons(inputId = name, label = label, choices = choices, selected = default_value)
   } else {
     limits <- unlist(str_split(boundaries, "\\-"))
-    numericInput(inputId = name, label, min = limits[1], max = limits[2], default_value)
+    numericInput(inputId = name, label = paste0(label, " [", limits[1], "-", limits[2], "]"), min = limits[1], max = limits[2], default_value)
   }}
 
 
