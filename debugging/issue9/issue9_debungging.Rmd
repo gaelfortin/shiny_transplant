@@ -23,6 +23,8 @@ library(Rcpp)
 
 ## Gerstung score estimates osDiag
 
+Récupération de scores osDiag:
+
 ```{r}
 library(readr)
 gerstung_score_estimates <- read_delim("../../gerstung_score_estimates.txt", 
@@ -208,9 +210,6 @@ f_calcul = function(newdata,x, models, timeSearch)
     
     absolutePredictions=data.frame(x=x,  osDiag=osDiag, nrsDiag=nrsDiag, rsDiag=rsDiag, relDiag=relDiag, osCr=osCr, nrsCr=nrsCr, relCr=relCr, rsCr=rsCr, ncd = ncd)
     
-    print("pred")
-    print(absolutePredictions[x == timeSearch,])
-    
     return(absolutePredictions[x == timeSearch,])
     
     
@@ -248,23 +247,27 @@ f_calcul = function(newdata,x, models, timeSearch)
 ```
 
 
+## hsct_pred Function
 
 
 ```{r}
 
-  oldata = read.csv("../../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+  
 
 hsct_pred <- function(patient = patient){
   # import data
+  
+  oldata = read.csv("../../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+  
   data2 <- patient %>% 
     select(-eln17, -MRD, -gerstung, -HSCT)
-  
+
+
   names(oldata)[!(names(oldata) %in% names(data2))]
   
+
   # remettre les colonnes dans le bon ordre
   data2 = data2[,names(oldata)]
-  
-  
   
   # transformation en numerique
   data2 <- data2 %>% 
@@ -308,14 +311,15 @@ hsct_pred <- function(patient = patient){
 ```
 
 
+### Prédiction pour tous les patients :
 
 Le bloc suivant cherche à générer un dataframe contenant pour chaque patient les valeurs de obs, HSCT, prediction.HSCT (sortie du programme) et le score osDiag.prediction obtenu avec le programme précédant.
 
 
 ```{r}
-all.patients <- read_tsv("../../ALFA0702_test_shiny.txt") %>% slice_head(n=100)
+all.patients <- read_tsv("../../ALFA0702_test_shiny.tsv") # Récupération données de départ
 
-nrow(all.patients)
+nrow(all.patients) # Il y a au départ 656 patient
 
 get_osDiag <- function(patient.test) {
   
@@ -344,16 +348,71 @@ for (row in 1:nrow(all.patients)) {
 head(results)
 ```
 
-J'obtiens 15 patients avec la bonne prédiction sur les 100 premiers.
+Dans le bloc suivant je commence par compter les patients en fonction de la prédiction.
+
+J'obtiens 527 patients avec la bonne prédiction et 127 avec une mauvaise prédiction (527 + 127 = 654 != 656). 
+
+Je récupère ensuite les IDs obs des patients avec une mauvaise prédiction dans `wrong.predictions`.
+
+On remarque que deux lignes sont absentes des résultats, `1001` et `17008` car leur HSCT est définit à `NA`.
 
 ```{r}
-results[results$HSCT != results$prediction_HSTC,] %>% nrow()
 
+results %>% rowwise() %>% filter(HSCT == prediction_HSTC) %>% nrow()
+
+results %>% rowwise() %>% filter(HSCT != prediction_HSTC) %>% nrow()
 
 wrong.predictions <- results[results$HSCT != results$prediction_HSTC,] %>% pull(obs)
 wrong.predictions
 ```
 
+```{r}
+results %>% rowwise() %>% filter(HSCT == prediction_HSTC | HSCT != prediction_HSTC) %>% pull(obs) %>% length() # 654
+
+results.obs <- results %>% rowwise() %>% filter(HSCT == prediction_HSTC | HSCT != prediction_HSTC) %>% pull(obs)
+
+gerstung.obs <- gerstung_score_estimates %>% pull(obs)
+
+not.in.results <- setdiff(gerstung.obs, results.obs)
+
+results %>% rowwise() %>% filter(obs %in% not.in.results)
+
+
+```
+
+
+
+Le bloc suivant permet d'effectuer des tests pour un seul patient. 
+
+Test pour effectuer des tests sur un seul patient :
+
+
+```{r}
+# Pour un seul patient test
+
+
+obs.test <- results %>% rowwise() %>% filter(obs == wrong.predictions[2])
+
+patient.wrong.prediction <- all.patients %>% rowwise() %>% filter(obs == obs.test)
+
+osDiag.gerstung <- gerstung_score_estimates %>% rowwise() %>% filter(obs == wrong.predictions[2]) %>% pull(osDiag)
+
+
+names(patient.wrong.prediction)
+
+get_osDiag(patient.wrong.prediction)
+
+print(osDiag.gerstung)
+
+```
+
+
+
+### Graphique de la relation osDiag attendue et prédite
+
+On remarque que la prédition du score osDiag est biaisé pour l'ensemble des patients et entraîne la mauvaise décision pour un certain nombre d'entre-eux.
+
+La majorité des patients a un score OSDiag prédit supérieur à celui attendu.
 
 
 ```{r}
@@ -379,4 +438,46 @@ plotly::ggplotly(plot)
 
 ```
 
+```{r}
+merged %>% write_tsv("results_prediction_")
+```
+
+
+Ici j'ai essayé d'observer l'effet de la partie du code d'imputation des données manquantes. 
+
+```{r}
+
+patient.wrong.prediction
+
+
+
+#-----------------------------------------------------------------------------------------------
+patient.wrong.prediction.2 <- patient.wrong.prediction[,1:(ncol(patient.wrong.prediction)-2)]
+
+
+###on importe le dataset qui permet d'imputer les donn?es manquantes
+oldata = read.csv("../../donneesAML.txt", h = T, sep = "\t", stringsAsFactor = T) ## donnees mises a disposition par Gerstung
+
+
+names(oldata)[!(names(oldata) %in% names(patient.wrong.prediction.2))]
+
+# remettre les colonnes dans le bon ordre
+patient.wrong.prediction.2 = patient.wrong.prediction.2[,names(oldata)]
+
+
+# transformation en numerique
+
+patient.wrong.prediction.2 <- patient.wrong.prediction.2 %>% 
+  mutate(across(everything(), as.numeric))
+#-----------------------------------------------------------------------------------------------
+
+
+
+names.1 <- patient.wrong.prediction %>% select(-gerstung, -eln17, -MRD, -HSCT, -obs)
+
+rbind(names.1, patient.wrong.prediction.2)
+
+setdiff(pull(names.1), pull(patient.wrong.prediction.2))
+
+```
 
