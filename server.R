@@ -217,7 +217,9 @@ shinyServer(function(input, output) {
         ##### Add treatment value (=transplantation)
         patient_data$transplantCR1 <- 0
         patient_data$transplantRel <- 1
-
+        
+        #Verify that NPM1 MRD = NA if NPM1 is WT
+        if (patient_data$NPM1 != 1) {patient_data$MRD[1] <- NA}
         write_csv(patient_data, "patient_data.csv")
 
         ##### Output input values (temporary output)
