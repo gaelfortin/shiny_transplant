@@ -223,9 +223,7 @@ shinyServer(function(input, output) {
         write_csv(patient_data, "patient_data.csv")
 
         ##### Output input values (temporary output)
-        output$resultsdata <- renderTable({
-          patient_data
-        })
+        # output$resultsdata <- renderTable({patient_data})
 
         incProgress(2/4)
         #####-------COMPUTE GERSTUNG SCORE-------#####

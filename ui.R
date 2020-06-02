@@ -77,7 +77,7 @@ shinyUI(fluidPage(
     column(7,
            h4("Prediction result"),
            useShinyalert(),
-            tableOutput("resultsdata"),
+            # tableOutput("resultsdata"),
               textOutput("hsct_prediction")
               )
   )
