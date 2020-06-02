@@ -4,6 +4,8 @@ library(xtable)
 library(RColorBrewer)
 library(CoxHD)
 library(Rcpp)
+library(shinyalert)
+library(htmlTable)
 
 #######Gerstung loading
 
@@ -37,7 +39,7 @@ widget_maker <- function(name, label, type, values, default_value, boundaries){
     default_value <- if_else(is.na(default_value), "NA", default_value)
     radioButtons(inputId = name, label = label, choices = choices, selected = default_value)
   } else {
-    limits <- unlist(str_split(boundaries, "\\-"))
+    limits <- as.numeric(unlist(str_split(boundaries, "\\-")))
     numericInput(inputId = name, label = paste0(label, " [", limits[1], "-", limits[2], "]"), min = limits[1], max = limits[2], default_value)
   }}
 
@@ -122,11 +124,53 @@ shinyServer(function(input, output) {
     
     ##### Merge all inputs for preparation
     observeEvent(input$compute, {
-      withProgress(message = "Calculation is in progress...", value = 0, {
+        input_checker <-function(variable){
+          boundaries <- filter(panel_structure, name == variable) %>% pull(boundaries)
+          limits <- as.numeric(unlist(str_split(boundaries, "\\-")))
+          return(as.numeric(select(patient_data, variable)) >= limits[1] & as.numeric(select(patient_data, variable)) <= limits[2])
+        }
+      
         patient_data <- 
           as_tibble(t(unlist(reactiveValuesToList(input)))) %>% 
             select(any_of(panel_structure$name)) 
-        incProgress(1/4)    
+        
+        ##### Check that numeric inputs are within range
+        wrong_input <- panel_structure %>%
+          filter(type == "integer") %>%
+          mutate(input_validity = map_chr(name, input_checker)) %>%
+          filter(input_validity == FALSE)
+
+        wrong_input <- mutate(patient_data, across(everything(), as.character)) %>%
+          pivot_longer(patient_data, cols = everything(),names_to = "name", values_to = "entered_value") %>%
+          right_join(wrong_input, by = "name") %>%
+          select("Variable" = label, "Limits" = boundaries, "Your input" = entered_value)
+        
+       #####Print alert if input out of range
+          if (nrow(wrong_input) != 0) {
+            warning_text <- c(
+              paste('<center><h4>The following values are out of range:</h4>',
+                    htmlTable(wrong_input, rnames = FALSE),
+                    'This is likely to lead to uncontrolled behaviour of the prediction.</center>'
+              ))
+            shinyalert(
+              title = "Values out of range",
+              text = warning_text,
+              closeOnEsc = TRUE,
+              closeOnClickOutside = FALSE,
+              html = TRUE,
+              type = "warning",
+              showConfirmButton = TRUE,
+              showCancelButton = FALSE,
+              confirmButtonText = "OK",
+              confirmButtonCol = "#AEDEF4",
+              timer = 0,
+              imageUrl = "",
+              animation = TRUE
+            )
+          }
+         
+        withProgress(message = "Calculation is in progress...", value = 0, {
+        incProgress(1/4)
         ##### Transform inputs
         patient_data[patient_data=="Absent"]<-"0"
         patient_data[patient_data=="Wildtype"]<-"0"
@@ -140,7 +184,7 @@ shinyServer(function(input, output) {
         patient_data[patient_data=="< 4 log"]<-"bad"
         patient_data[patient_data=="> 4 log"]<-"good"
         mrd <- patient_data$MRD[1]
-        
+
         ##### Encode additional AML_type variables
         AML <- patient_data$AML_type[1] #de novo,secondary,therapy-related,other,N/A
         patient_data$oAML[1] <- case_when(AML == "de novo" ~ 0,
@@ -158,7 +202,7 @@ shinyServer(function(input, output) {
                                           AML == "therapy-related" ~ 0,
                                           AML == "other" ~ 0,
                                           AML == NA ~ NA_real_)
-  
+
         ###### Transform numeric values
         patient_data <- mutate_all(patient_data, as.numeric)
         patient_data$AOD_10[1] <- patient_data$AOD_10[1]/10
@@ -169,18 +213,18 @@ shinyServer(function(input, output) {
         patient_data$BM_Blasts_100[1] <- patient_data$BM_Blasts_100[1]/100
         # patient_data$AML_type[1] <- AML #Put AML_type back
         patient_data$MRD[1] <- mrd #Put MRD character value back
-        
+
         ##### Add treatment value (=transplantation)
         patient_data$transplantCR1 <- 0
         patient_data$transplantRel <- 1
-  
+
         write_csv(patient_data, "patient_data.csv")
-        
+
         ##### Output input values (temporary output)
         output$resultsdata <- renderTable({
           patient_data
         })
-        
+
         incProgress(2/4)
         #####-------COMPUTE GERSTUNG SCORE-------#####
         data2 <- patient_data %>% select(-eln17, -MRD)
@@ -188,9 +232,9 @@ shinyServer(function(input, output) {
         # remettre les colonnes dans le bon ordre
         data2 = data2[,names(oldata)]
         # transformation en numerique
-        data2 <- data2 %>% 
+        data2 <- data2 %>%
           mutate(across(everything(), as.numeric))
-        
+
         f_calcul = function(newdata,x, models, timeSearch) #scoring function
         {
           for(i in 1:ncol(newdata))
@@ -200,8 +244,8 @@ shinyServer(function(input, output) {
               newdata[, i] = round(newdata[, i])
             }
           }
-          
-          
+
+
           ######################### RAJOUT DES INTERACTIONS DANS LE JEU DE DONNEES D'ANALYSE #################
           ## rajoute les interactions et les nuisances dans le newdata frame
           l = list()
@@ -220,7 +264,7 @@ shinyServer(function(input, output) {
           temp = data.frame(t(unlist(l)))
           names(temp) = names(l)
           newdata = cbind.data.frame(newdata,temp)
-          
+
           l = list()
           for(n in NUISANCE)
           {
@@ -230,16 +274,16 @@ shinyServer(function(input, output) {
           temp = data.frame(t(unlist(l)))
           names(temp) = names(l)
           newdata = cbind.data.frame(newdata,temp)
-          
+
           #################################### FONCTIONS POUR LES CALCULS ####################################
-          
-          
+
+
           computeIncidence <- function(coxRFX, r, x) {
             #r=PredictRiskMissing(coxRFX, data, var="var2")
             if(!is.null(coxRFX$na.action))
               coxRFX$Z <- coxRFX$Z[-coxRFX$na.action,]
             #r <- PredictRiskMissing(coxRFX, data, var="var2")
-            
+
             H0 <- summary(survfit(coxRFX,se.fit = FALSE),times = x)
             hazardDist <- splinefun(H0$time, -log(H0$surv), method="monoH.FC")
             r0 <- coxRFX$means %*% coef(coxRFX)
@@ -255,9 +299,9 @@ shinyServer(function(input, output) {
             #p <- PartialRisk(coxRFX, dataImputed)
             return(list(inc=inc, r=r, x=x, hazardDist=hazardDist, r0 = r0, ciup=ciup, cilo=cilo, ciup2=ciup2, cilo2=cilo2))
           }
-          
-          
-          
+
+
+
           riskMissing <- function(newdata)
           {
             sapply(models, function(m){
@@ -266,82 +310,82 @@ shinyServer(function(input, output) {
                 fit$Z <- fit$Z[-fit$na.action,]
               PredictRiskMissing(fit, newdata,  var="var2")}, simplify = FALSE)
           }
-          
-          
+
+
           crAdjust <- function(x, y, time=x$x) {
             xadj <- .crAdjust(x$inc, y$inc, time)
           }
-          
+
           .crAdjust <- function(inc1, inc2, time) {
             cumsum(c(1,diff(inc1) * splinefun(time, inc2)(time[-1])))
           }
-          
-          
-          
-          
-          
-          
+
+
+
+
+
+
           survPredict <- function(surv){
             s <- survfit(surv~1)
             splinefun(s$time, s$surv, method="monoH.FC")
           }
           prsP <- survPredict(Surv(prdData$time1, prdData$time2, prdData$status))(x) # Baseline Prs (measured from relapse)
-          
-          coxphPrs <- coxph(Surv(time1, time2, status)~ pspline(time0, df=10), data=data.frame(prdData, time0=as.numeric(clinicalData$Recurrence_date-clinicalData$CR_date)[prdData$index])) 
-          tdPrmBaseline <- exp(predict(coxphPrs, newdata=data.frame(time0=x[-1]))) ## Hazard (function of CR length)	
-          
-          coxphOs <- coxph(Surv(time1,time2, status)~ pspline(time0, df=10), data=data.frame(osData, time0=pmin(500,cr[osData$index,1]))) 
+
+          coxphPrs <- coxph(Surv(time1, time2, status)~ pspline(time0, df=10), data=data.frame(prdData, time0=as.numeric(clinicalData$Recurrence_date-clinicalData$CR_date)[prdData$index]))
+          tdPrmBaseline <- exp(predict(coxphPrs, newdata=data.frame(time0=x[-1]))) ## Hazard (function of CR length)
+
+          coxphOs <- coxph(Surv(time1,time2, status)~ pspline(time0, df=10), data=data.frame(osData, time0=pmin(500,cr[osData$index,1])))
           tdOsBaseline <- exp(predict(coxphOs, newdata=data.frame(time0=x[-1])))	 ## Hazard (function of induction length), only for OS (could do CIR,NRM,PRS seperately)
-          
-          
-          
-          
+
+
+
+
           computeAbsoluteProbabilities <- function(i, newdata)
           {
             newdata = newdata[i,]
-            
-            
+
+
             ## KM incidence of NCD and CR
             kmNcd <- computeIncidence(coxRFX = coxRFXNcdTD, r = riskMissing(newdata)[["Ncd"]], x=x)
             kmCr <- computeIncidence(coxRFX = coxRFXCrTD, r = riskMissing(newdata)[["Cr"]], x=x)
-            
+
             ## Correct KM estimate for competing risk
             ncd <- crAdjust(x= kmNcd, time=x, y=kmCr) ## Correct KM estimate for competing risk
             cr <- crAdjust(x= kmCr, time=x, y=kmNcd) ## Correct KM estimate for competing risk
-            
+
             ## KM incidence of Relapse and NRD
             kmRel <- computeIncidence(coxRFX = coxRFXRelTD, r = riskMissing(newdata)[["Rel"]], x=x)
             kmNrd <-  computeIncidence(coxRFX = coxRFXNrdTD, r = riskMissing(newdata)[["Nrd"]], x=x)
-            
+
             ## Correct KM estimate for competing risk
             relCr <- crAdjust(x= kmRel, time=x, y=kmNrd) ## Correct KM estimate for competing risk
             nrsCr <- crAdjust(x = kmNrd, time = x, y = kmRel)
-            
+
             ## KM incidence of PRS
             kmPrs <-  computeIncidence(coxRFX = coxRFXPrdTD, r = riskMissing(newdata)[["Prd"]], x=x)
-            
+
             ## Outcome after Remission
             rsCr <- computeHierarchicalSurvival(x = x, diffS0 = diff(relCr), S1Static = prsP, haz1TimeDep = tdPrmBaseline * exp(kmPrs$r[,1]-kmPrs$r0))
             osCr <- 1-(1-nrsCr)-(1-rsCr)
-            
+
             ## Outcome from diagnosis
             osDiag <- computeHierarchicalSurvival(x = x, diffS0 = diff(cr), S1Static = osCr, haz1TimeDep = tdOsBaseline) - (1-ncd)
             nrsDiag <- computeHierarchicalSurvival(x = x, diffS0 = diff(cr), S1Static = nrsCr, haz1TimeDep = tdOsBaseline)
             rsDiag <- computeHierarchicalSurvival(x = x, diffS0 = diff(cr), S1Static = rsCr, haz1TimeDep = tdOsBaseline)
             relDiag <- computeHierarchicalSurvival(x = x, diffS0 = diff(cr), S1Static = relCr, haz1TimeDep = tdOsBaseline)
-            
-            
+
+
             absolutePredictions=data.frame(x=x,  osDiag=osDiag, nrsDiag=nrsDiag, rsDiag=rsDiag, relDiag=relDiag, osCr=osCr, nrsCr=nrsCr, relCr=relCr, rsCr=rsCr, ncd = ncd)
-            
+
             return(absolutePredictions[x == timeSearch,])
-            
-            
-            
-            
+
+
+
+
           }
-          
-          
-          
+
+
+
           cppFunction('NumericVector computeHierarchicalSurvival(NumericVector x, NumericVector diffS0, NumericVector S1Static, NumericVector haz1TimeDep) {
                 int xLen = x.size();
                 double h;
@@ -357,13 +401,13 @@ shinyServer(function(input, output) {
                 }
                 return overallSurvival;
   }')
-          
-          
-          
-          
+
+
+
+
           res = sapply(1:nrow(newdata), computeAbsoluteProbabilities, newdata = newdata)
           colnames(res) = rownames(newdata)
-          
+
           return(res)
         }
         incProgress(3/4)
@@ -371,25 +415,25 @@ shinyServer(function(input, output) {
         # imputation des donnees manquantes
         set.seed(123)
         data2i = data.frame(ImputeMissing(oldata, data2))
-        
+
         # 5 ans allRel
         timeSearch = 1825 # temps retenu pour la prediction (en jours)
         x <- seq(0,timeSearch,1)#0:2000
         models <- c("Ncd","Cr","Rel","Nrd","Prd")
-        res = f_calcul(data2i, x = x, models = models, timeSearch = timeSearch)				
-        
+        res = f_calcul(data2i, x = x, models = models, timeSearch = timeSearch)
+
         ###la valeur qui m'interesse est osDiag, sauf erreur c'est
-        
+
         osDiag <- res[2,1]
-        
-        ##le cutoff est 
-        
+
+        ##le cutoff est
+
         gerstung <- ifelse(osDiag < 0.30, 1, 0)
-        
-        
+
+
         ### et apres, on n' a plus qu'a lancer l'operateur booleen
-        
-        
+
+
         eln17_candidates <- case_when(
           patient_data$MRD=="good" ~0,
           patient_data$MRD=="bad" ~1,
@@ -398,11 +442,11 @@ shinyServer(function(input, output) {
           patient_data$eln17==3 ~1,
           missing=NULL
         )
-        
-        
-        
+
+
+
         HSCT <- if_else(gerstung==1 & eln17_candidates==1,"candidate","not candidate", missing=NULL)
-        
+
         incProgress(4/4)
         ###et on retourne vers l'app pour afficher
         output$hsct_prediction <- renderText({

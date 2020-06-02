@@ -8,7 +8,6 @@ library(Rcpp)
 
 
 
-
 shinyUI(fluidPage(
   titlePanel("HSCT prediction"),
   fluidRow(
@@ -66,7 +65,8 @@ shinyUI(fluidPage(
         uiOutput("expandmrd"),
       
       #action compute
-      actionButton("compute", tags$b("Compute prediction"), class="btn btn-primary", style = "margin-bottom:20px")
+      actionButton("compute", tags$b("Compute prediction"), class="btn btn-primary", style = "margin-bottom:20px"),
+      
     ),
     
     
@@ -76,7 +76,8 @@ shinyUI(fluidPage(
     
     column(7,
            h4("Prediction result"),
-              tableOutput("resultsdata"),
+           useShinyalert(),
+            tableOutput("resultsdata"),
               textOutput("hsct_prediction")
               )
   )
