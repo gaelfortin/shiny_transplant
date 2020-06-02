@@ -10,11 +10,11 @@ library(Rcpp)
 
 
 shinyUI(fluidPage(
-  titlePanel("HSCT predictions"),
+  titlePanel("HSCT prediction"),
   fluidRow(
     column(3,
            style = "border: 1px solid rgb(205,205,205);border-radius: 10px; background:rgb(245,245,245);",
-           h2("Enter variables"),
+           h4("Enter variables"),
         #Clinical data panel
         wellPanel(
           style = "background:rgb(255,255,255);",
@@ -75,7 +75,7 @@ shinyUI(fluidPage(
     
     
     column(7,
-           h2("Prediction result"),
+           h4("Prediction result"),
               tableOutput("resultsdata"),
               textOutput("hsct_prediction")
               )
