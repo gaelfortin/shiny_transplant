@@ -138,7 +138,7 @@ shinyServer(function(input, output) {
         wrong_input <- panel_structure %>%
           filter(type == "integer") %>%
           mutate(input_validity = map_chr(name, input_checker)) %>%
-          filter(input_validity == FALSE)
+          filter(is.na(input_validity) | input_validity == FALSE)
 
         wrong_input <- mutate(patient_data, across(everything(), as.character)) %>%
           pivot_longer(patient_data, cols = everything(),names_to = "name", values_to = "entered_value") %>%
