@@ -10,6 +10,7 @@ library(shinyalert)
 
 shinyUI(fluidPage(
   titlePanel("HSCT prediction"),
+  HTML("<i>For research purpose only.</i>"),
   fluidRow(
     column(3,
            style = "border: 1px solid rgb(205,205,205);border-radius: 10px; background:rgb(245,245,245);",
